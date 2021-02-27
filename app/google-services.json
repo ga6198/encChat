@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "436457739032",
+    "project_id": "encchat-506da",
+    "storage_bucket": "encchat-506da.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:436457739032:android:d12a84c306d4985e3f846d",
+        "android_client_info": {
+          "package_name": "com.example.p2pchat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "436457739032-6epsbu5f2v5s2tbv6rels1ht2gb80mm4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.p2pchat",
+            "certificate_hash": "0e8540714b23da4272b8293ed3e5d5ea02395170"
+          }
+        },
+        {
+          "client_id": "436457739032-3f085g0ri0tcfie7evr28l76tpptk0po.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkbhwUcUmWkytRhOZxzaRA4d_vXjfbfg0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "436457739032-3f085g0ri0tcfie7evr28l76tpptk0po.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

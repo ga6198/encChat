@@ -67,6 +67,19 @@ public class CryptoHelper {
         return key;
     }
 
+    //Generates public/private key pair
+    static public KeyPair generateKeyPair() throws NoSuchAlgorithmException {
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+        kpg.initialize(2048);
+        KeyPair kp = kpg.generateKeyPair();
+
+        //Public and private key
+        Key pub = kp.getPublic();
+        Key pvt = kp.getPrivate();
+
+        return kp;
+    }
+
     /*
     static public void saveKeysToSharedPreferences(Context context){
         //SharedPreferences sharedPref;

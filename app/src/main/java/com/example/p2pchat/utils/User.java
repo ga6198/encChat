@@ -11,7 +11,9 @@ import java.security.cert.X509Certificate;
 import static android.content.Context.MODE_PRIVATE;
 
 public class User {
+    private String id;
     private String username;
+    private String password;
     private Key publicKey;
     private Key privateKey;
 
@@ -24,35 +26,11 @@ public class User {
         this.username = username;
 
         //generate the user keys
-        KeyPair keys = generateKeyPair();
+        KeyPair keys = CryptoHelper.generateKeyPair();
         this.publicKey = keys.getPublic();
         this.privateKey = keys.getPrivate();
 
-        //get an X509 Certificate
-
     }
-
-    //Generates public/private key pair and saves them to file
-    //Only the public key is returned
-    private KeyPair generateKeyPair() throws NoSuchAlgorithmException {
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-        kpg.initialize(2048);
-        KeyPair kp = kpg.generateKeyPair();
-
-        //Public and private key
-        Key pub = kp.getPublic();
-        Key pvt = kp.getPrivate();
-
-        return kp;
-    }
-
-    /*
-    private X509Certificate generateCertification(KeyPair keyPair){
-        CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        X509Certificate cert = (X509Certificate)cf.generateCertificate(inStream);
-        return certificate
-    }
-     */
 
     public String getUsername() {
         return username;
@@ -60,6 +38,14 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public Key getPrivateKey() {

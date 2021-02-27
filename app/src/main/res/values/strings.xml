@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">P2PChat</string>
+    <string name="app_name">EncChat</string>
     <string name="home_page_title">Home</string>
     <string name="preference_file_key">p2pPreferences</string>
     <string name="count_initial_value">0</string>
