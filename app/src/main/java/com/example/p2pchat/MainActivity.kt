@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Patterns
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -16,6 +17,7 @@ import com.example.p2pchat.utils.AESAlg
 import com.example.p2pchat.utils.CryptoHelper
 
 import com.example.p2pchat.utils.User
+import com.google.firebase.auth.FirebaseAuth
 import java.security.Key
 import java.util.*
 
@@ -58,7 +60,54 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, RegistrationActivity::class.java)
             startActivity(intent)
         }
+
+        login()
     }
+
+    fun login(){
+        val submitButton: Button = findViewById<Button>(R.id.submitButton)
+        val usernameText: TextView = findViewById<TextView>(R.id.usernameText)
+        val passwordText: TextView = findViewById<TextView>(R.id.passwordText)
+
+        submitButton.setOnClickListener {
+            val usernameInput = usernameText.text.toString()
+            val passwordInput = passwordText.text.toString()
+
+            if(usernameInput.isEmpty()){
+                Toast.makeText(this, "Please enter a valid email", Toast.LENGTH_SHORT).show()
+            }
+            else if(!Patterns.EMAIL_ADDRESS.matcher(usernameInput).matches()){
+                Toast.makeText(this, "Please enter a valid email", Toast.LENGTH_SHORT).show()
+            }
+            else if(passwordInput.isEmpty()){
+                Toast.makeText(this, "Please enter your password", Toast.LENGTH_SHORT).show()
+            }
+            else{
+                val mAuth = FirebaseAuth.getInstance();
+                mAuth.signInWithEmailAndPassword(usernameInput, passwordInput).addOnCompleteListener {
+                    if(it.isSuccessful()){
+                        //redirect to main page
+                        val intent = Intent(this, HomePageActivity::class.java)
+                        startActivity(intent)
+                    }
+                    else{
+                        Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show()
+
+                    }
+                }
+            }
+
+        }
+    }
+
+
+
+
+
+
+
+
+
 
     fun createAccount(sharedPref: SharedPreferences){
         val submitButton: Button = findViewById<Button>(R.id.submitButton)

@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Patterns
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -42,16 +43,11 @@ class RegistrationActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-
-        //get values from User Data from sharedpreferences
-        val sharedPref = getSharedPreferences(
-            getString(R.string.preference_file_key), Context.MODE_PRIVATE)
-
         //create account
-        createAccount(sharedPref)
+        createAccount()
     }
 
-    fun createAccount(sharedPref: SharedPreferences){
+    fun createAccount(){
         val submitButton: Button = findViewById<Button>(R.id.submitButton)
         val usernameText: TextView = findViewById<TextView>(R.id.usernameText)
         val passwordText: TextView = findViewById<TextView>(R.id.passwordText)
@@ -65,6 +61,10 @@ class RegistrationActivity : AppCompatActivity() {
             //If username not provided
             if(usernameInput.isEmpty()) {
                 Toast.makeText(this, "Please enter a username", Toast.LENGTH_SHORT).show()
+            }
+            //email invalid format
+            else if(!Patterns.EMAIL_ADDRESS.matcher(usernameInput).matches()){
+                Toast.makeText(this, "Please enter a valid email", Toast.LENGTH_SHORT).show()
             }
             //If password too short
             else if(passwordInput.length<6){
@@ -144,7 +144,11 @@ class RegistrationActivity : AppCompatActivity() {
                     Toast.makeText(this, "Registered successfully", Toast.LENGTH_LONG).show()
 
                     //Save the user's information to SharedPreferences, with Firebase userid
-
+                    //get values from User Data from sharedpreferences
+                    newUser.id = userId
+                    val sharedPref = getSharedPreferences(
+                        getString(R.string.preference_file_key), Context.MODE_PRIVATE)
+                    saveToSharedPreferences(sharedPref, newUser)
 
                     //Redirect inside the app
                     val intent = Intent(this, HomePageActivity::class.java)
@@ -175,10 +179,10 @@ class RegistrationActivity : AppCompatActivity() {
         val encryptedPrvKeyStr = Base64.getEncoder().encodeToString(encryptedPrvKey)
 
         //Save values to sharedpreferences
-        editor.putString("username", user.username)
-        editor.putString("public_key", pubKeyStr)
-        editor.putString("private_key", encryptedPrvKeyStr)
-        editor.putString("private_key_iv", ivStr)
+        editor.putString(user.id + "_username", user.username)
+        editor.putString(user.id + "_public_key", pubKeyStr)
+        editor.putString(user.id + "_private_key", encryptedPrvKeyStr)
+        editor.putString(user.id + "_private_key_iv", ivStr)
 
         editor.apply()
 
