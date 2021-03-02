@@ -23,10 +23,6 @@ import java.lang.Exception;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 
-enum KeyType{
-    PUBLIC, PRIVATE
-}
-
 public class CryptoHelper {
 
 

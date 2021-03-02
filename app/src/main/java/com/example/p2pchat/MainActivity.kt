@@ -86,8 +86,12 @@ class MainActivity : AppCompatActivity() {
                 val mAuth = FirebaseAuth.getInstance();
                 mAuth.signInWithEmailAndPassword(usernameInput, passwordInput).addOnCompleteListener {
                     if(it.isSuccessful()){
+                        val userId = FirebaseAuth.getInstance().currentUser!!.uid
+
                         //redirect to main page
                         val intent = Intent(this, HomePageActivity::class.java)
+                        intent.putExtra("userId", userId)
+                        intent.putExtra("username", usernameInput)
                         startActivity(intent)
                     }
                     else{

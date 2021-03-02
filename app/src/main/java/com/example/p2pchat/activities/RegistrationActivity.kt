@@ -112,7 +112,8 @@ class RegistrationActivity : AppCompatActivity() {
                 saveUser(user)
             }
             else{
-                Toast.makeText(this, "Failed to register", Toast.LENGTH_LONG).show()
+                println(it.exception)
+                Toast.makeText(this, "Failed to register\n${it.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
             }
 
         }
@@ -150,8 +151,11 @@ class RegistrationActivity : AppCompatActivity() {
                         getString(R.string.preference_file_key), Context.MODE_PRIVATE)
                     saveToSharedPreferences(sharedPref, newUser)
 
-                    //Redirect inside the app
+                    //Redirect inside the app and save user data
                     val intent = Intent(this, HomePageActivity::class.java)
+                    //id can be retrieved with the firebaseauth, but saving to the intent is fine as well
+                    intent.putExtra("userId", newUser.id)
+                    intent.putExtra("username", newUser.username)
                     startActivity(intent)
                 }
                 else{
