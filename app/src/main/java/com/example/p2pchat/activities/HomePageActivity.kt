@@ -92,6 +92,7 @@ class HomePageActivity : AppCompatActivity() {
                         val userPublicKey = CryptoHelper.decodeKey(userPublicKeyEncoded, KeyType.PUBLIC)
 
                         val user = User()
+                        user.id = document.id
                         user.username = username
                         user.publicKey = userPublicKey
 
@@ -142,19 +143,63 @@ class HomePageActivity : AppCompatActivity() {
             currentUser.username = currentUsername
 
             //for now, just directly opening a chat
-            openChat(currentUser, user)
+            createChat(currentUser, user)
         }
 
         builder.show()
     }
 
+    fun createChat(currentUser: User, otherUser: User){
+        val db = FirebaseFirestore.getInstance()
+        val chatsRef = db.collection("chats")
+
+        //check if the chat exists
+        //chatsRef.whereArrayContains("members", listOf<String>(currentUser.id, otherUser.id))
+        chatsRef.whereEqualTo("members.${currentUser.id}", true)
+            .whereEqualTo("members.${otherUser.id}", true)
+            .get()
+            .addOnCompleteListener{task->
+                if(task.isSuccessful()){
+                    val returnedSnapshot = task.result
+
+                    if (returnedSnapshot != null) {
+                        //if the chat does not exist, create it
+                        if(returnedSnapshot.isEmpty()){
+                            //save new message document to the database
+                            val chatData = hashMapOf(
+                                "members" to hashMapOf(
+                                    currentUser.id to true,
+                                    otherUser.id to true
+                                ) //listOf<String>(currentUser.id, otherUser.id)
+                            )
+                            chatsRef.add(chatData)
+                                .addOnCompleteListener{task->
+                                    if(task.isSuccessful()){
+                                        openChat(currentUser, otherUser)
+                                    } else{
+                                        Toast.makeText(this, "Could not create the chat", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                        }
+                        //chat already exists, so open it
+                        else{
+                            openChat(currentUser, otherUser)
+                        }
+                    }
+                }
+            }
+
+    }
+
     fun openChat(currentUser: User, otherUser: User){
         val intent = Intent(this, ChatActivity::class.java)
         //id can be retrieved with the firebaseauth, but saving to the intent is fine as well
+
         intent.putExtra("userId", currentUser.id)
         intent.putExtra("username", currentUser.username)
         intent.putExtra("otherUserId", otherUser.id)
         intent.putExtra("otherUsername", otherUser.username)
+
         startActivity(intent)
     }
 }
