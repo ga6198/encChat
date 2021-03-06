@@ -18,6 +18,8 @@ import com.example.p2pchat.utils.CryptoHelper
 
 import com.example.p2pchat.utils.User
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
 import java.security.Key
 import java.util.*
 
@@ -27,6 +29,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        //set initial firebase settings
+        //stop deleted documents from caching
+        val db = FirebaseFirestore.getInstance()
+        val settings = FirebaseFirestoreSettings.Builder()
+            .setPersistenceEnabled(false)
+            .build()
+        db.firestoreSettings = settings
 
         //set onclicks
         onClick()

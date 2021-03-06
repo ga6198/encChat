@@ -175,7 +175,13 @@ class HomePageActivity : AppCompatActivity() {
                             chatsRef.add(chatData)
                                 .addOnCompleteListener{task->
                                     if(task.isSuccessful()){
-                                        openChat(currentUser, otherUser)
+                                        val chatId = task.result?.id
+                                        if (chatId != null) {
+                                            openChat(currentUser, otherUser, chatId)
+                                        }
+                                        else{
+                                            println("Chat was not found")
+                                        }
                                     } else{
                                         Toast.makeText(this, "Could not create the chat", Toast.LENGTH_LONG).show()
                                     }
@@ -183,7 +189,8 @@ class HomePageActivity : AppCompatActivity() {
                         }
                         //chat already exists, so open it
                         else{
-                            openChat(currentUser, otherUser)
+                            val chatId = returnedSnapshot.documents[0].id //just getting the first document, which should be the only chat
+                            openChat(currentUser, otherUser, chatId)
                         }
                     }
                 }
@@ -191,7 +198,7 @@ class HomePageActivity : AppCompatActivity() {
 
     }
 
-    fun openChat(currentUser: User, otherUser: User){
+    fun openChat(currentUser: User, otherUser: User, chatId: String){
         val intent = Intent(this, ChatActivity::class.java)
         //id can be retrieved with the firebaseauth, but saving to the intent is fine as well
 
@@ -199,6 +206,8 @@ class HomePageActivity : AppCompatActivity() {
         intent.putExtra("username", currentUser.username)
         intent.putExtra("otherUserId", otherUser.id)
         intent.putExtra("otherUsername", otherUser.username)
+
+        intent.putExtra("chatId", chatId)
 
         startActivity(intent)
     }

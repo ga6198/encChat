@@ -2,9 +2,21 @@ package com.example.p2pchat.activities
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.TextView
+import android.util.Log
+import android.widget.*
 import com.example.p2pchat.R
+import com.example.p2pchat.utils.Chat
+import com.example.p2pchat.utils.ChatMessage
 import com.example.p2pchat.utils.User
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.*
+import android.database.DataSetObserver
+import android.widget.AbsListView
+import com.example.p2pchat.utils.ChatArrayAdapter
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+
+
 
 class ChatActivity : AppCompatActivity() {
 
@@ -13,6 +25,10 @@ class ChatActivity : AppCompatActivity() {
         setContentView(R.layout.activity_chat)
 
         val extras = getIntent().extras
+
+        //get chat data
+        val chatId = extras?.getString("chatId")
+        val chat = Chat(chatId)
 
         //get current user data
         val currentUsername = extras?.getString("username")
@@ -32,6 +48,150 @@ class ChatActivity : AppCompatActivity() {
         val usernameTextView = findViewById<TextView>(R.id.usernameText)
         usernameTextView.setText(otherUsername)
 
-        //load messages/set adapter for messages
+        /*
+        chat adapter
+        */
+        val chatArrayAdapter = ChatArrayAdapter(applicationContext, R.layout.my_message)
+        val listView = findViewById(R.id.messages_view) as ListView
+        listView.adapter = chatArrayAdapter
+        listView.transcriptMode = AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL
+        listView.adapter = chatArrayAdapter
+        //to scroll the list view to bottom on data change
+        chatArrayAdapter.registerDataSetObserver(object : DataSetObserver() {
+            override fun onChanged() {
+                super.onChanged()
+                listView.setSelection(chatArrayAdapter.count - 1)
+            }
+        })
+
+        val db = FirebaseFirestore.getInstance()
+        val messagesRef = db.collection("chats")
+            .document(chat.id)
+            .collection("messages")
+
+        /*
+        //load existing messages
+        messagesRef.get().addOnCompleteListener{task->
+            if(task.isSuccessful()){
+                val result = task.result?.documents
+                for (doc in result!!){
+                    val messageData = doc.getData()
+                    var ownMessage = false
+                    if(messageData?.get("senderId")?.equals(currentUser.id)!!){
+                        ownMessage = true
+                    }
+
+                    val message = ChatMessage(
+                        messageData["senderId"] as String?,
+                        messageData["message"] as String?, messageData["time"] as Timestamp?,
+                        ownMessage
+                    )
+                    //messages.add(message)
+                    chatArrayAdapter.add(message)
+                }
+            }
+            else{
+                Log.d("ChatActivity.kt", "Messages were not loaded properly")
+            }
+        }
+
+         */
+
+
+        //load messages/set adapter for NEW messages
+        //This adapter only needs to update for each SINGLE NEW message
+
+        messagesRef.orderBy("time").addSnapshotListener{ value, error ->
+            if (error != null) {
+                Log.w("ChatActivity.kt", "Listen failed.", error)
+                return@addSnapshotListener
+            }
+
+            /*
+            if (value != null) {
+                if(!value.isEmpty) {
+                    val newDoc = value.documents[0]
+                    val messageData = newDoc.getData()
+                    var ownMessage = false
+                    if (messageData?.get("senderId")?.equals(currentUser.id)!!) {
+                        ownMessage = true
+                    }
+
+                    val message = ChatMessage(
+                        messageData["senderId"] as String?,
+                        messageData["message"] as String?, messageData["time"] as Timestamp?,
+                        ownMessage
+                    )
+
+                    //TODO: modify this to add the newest message only
+                    chatArrayAdapter.add(message)
+
+                }
+            }
+
+             */
+
+            //array of messages, in time order
+            val messages = ArrayList<ChatMessage>()
+
+
+            for (doc in value!!){
+
+                val messageData = doc.getData()
+                var ownMessage = false
+                if(messageData["senderId"]?.equals(currentUser.id)!!){
+                    ownMessage = true
+                }
+
+                val message = ChatMessage(
+                    messageData["senderId"] as String?,
+                    messageData["message"] as String?, messageData["time"] as Timestamp?,
+                    ownMessage
+                )
+                //messages.add(message)
+
+                //if the adapter does not contain the message, then add
+                if(!chatArrayAdapter.contains(message)){
+                    chatArrayAdapter.add(message)
+                }
+            }
+        }
+
+
+        //onclicks
+        onClick(currentUser, otherUser, chat)
+    }
+
+    fun onClick(currentUser: User, otherUser: User, chat: Chat){
+        //send button
+        val sendButton = findViewById<ImageButton>(R.id.sendButton)
+        val sendText = findViewById<EditText>(R.id.sendText)
+
+        sendButton.setOnClickListener{
+            val sendInput = sendText.text.toString()
+
+            //if there was text given
+            if (sendInput != ""){
+                //data, like time, author
+                //val date = Calendar.getInstance().time
+                val currentTime = Timestamp.now()
+
+                val messageData = hashMapOf<String, Any>(
+                    "time" to currentTime,
+                    "message" to sendInput,
+                    "senderId" to currentUser.id
+                )
+
+                //write the message to the database
+                val db = FirebaseFirestore.getInstance()
+                db.collection("chats")
+                    .document(chat.id)
+                    .collection("messages")
+                    .add(messageData) //no oncomplete really necessaary for this
+
+                //reset text
+                sendText.setText("")
+            }
+        }
     }
 }
