@@ -180,15 +180,46 @@ class ChatActivity : AppCompatActivity() {
                 val messageData = hashMapOf<String, Any>(
                     "time" to currentTime,
                     "message" to sendInput,
-                    "senderId" to currentUser.id
+                    "senderId" to currentUser.id,
+                    "senderUsername" to currentUser.username
                 )
 
+                //create another map with the same data for saving to the usersChats collection
+                val lastMessageData = hashMapOf<String, Any>(
+                    "lastMessageTime" to currentTime,
+                    "lastMessage" to sendInput,
+                    "lastSenderId" to currentUser.id,
+                    "lastUsername" to currentUser.username
+                )
+
+                //generate a new document reference for a message, with a new id
+                val db = FirebaseFirestore.getInstance()
+                val newMessageRef = db.collection("chats").document(chat.id).collection("messages").document()
+                val newMessageId = newMessageRef.id
+
                 //write the message to the database
+                val usersRef = db.collection("users")
+                val currentUserRef = usersRef.document(currentUser.id).collection("usersChats").document(chat.id)
+                val otherUserRef = usersRef.document(otherUser.id).collection("usersChats").document(chat.id)
+
+                db.runTransaction{transaction ->
+                    //write the message to the chats collection
+                    transaction.set(newMessageRef, messageData)
+
+                    //save the last chat message data for users
+                    transaction.update(currentUserRef, lastMessageData)
+                    transaction.update(otherUserRef, lastMessageData)
+                }
+
+                //write the message to the database
+                /*
                 val db = FirebaseFirestore.getInstance()
                 db.collection("chats")
                     .document(chat.id)
                     .collection("messages")
-                    .add(messageData) //no oncomplete really necessaary for this
+                    .add(messageData) //no oncomplete really necessary for this
+
+                 */
 
                 //reset text
                 sendText.setText("")

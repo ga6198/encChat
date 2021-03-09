@@ -50,10 +50,12 @@ class HomePageActivity : AppCompatActivity() {
         //load the user's existing chats
         val db = FirebaseFirestore.getInstance()
         val chatsRef = db.collection("chats")
+        val usersChatsRef = db.collection("users").document(currentUser.id).collection("usersChats")
 
         //TODO: Fix this query. It does not work because it must be indexed
-        chatsRef.whereEqualTo("members.${currentUser.id}", true)
-            .orderBy("lastMessageTime").addSnapshotListener{value, error ->
+        //chatsRef.whereEqualTo("members.${currentUser.id}", true)
+        //    .orderBy("lastMessageTime").addSnapshotListener{value, error ->
+        usersChatsRef.orderBy("lastMessageTime").addSnapshotListener{value, error ->
                 if (error != null) {
                     Log.w("HomePageActivity.kt", "Listen failed.", error)
                     return@addSnapshotListener
@@ -69,14 +71,14 @@ class HomePageActivity : AppCompatActivity() {
 
                     val chatData = doc.getData()
 
-                    /*
+
                     val chat = Chat(doc.id,
                         chatData["lastUsername"] as String?,
                         chatData["lastMessage"] as String?,
                         chatData["lastMessageTime"] as Timestamp?)
 
-                     */
-                    val chat = Chat(doc.id)
+
+                    //val chat = Chat(doc.id)
 
                     //TODO: Add chat to the adapter
                     if(!chatArrayAdapter.contains(chat)){
@@ -227,9 +229,10 @@ class HomePageActivity : AppCompatActivity() {
                         //if the chat does not exist, create it
                         if(returnedSnapshot.isEmpty()){
 
-                            //save new message document to the database
+                            //save new chat document to the Chats collection
                             val timeCreated = Timestamp.now()
                             val chatData = hashMapOf(
+                                "creator" to currentUser.id,
                                 "timeCreated" to timeCreated,
                                 "members" to hashMapOf(
                                     currentUser.id to true,
@@ -244,6 +247,7 @@ class HomePageActivity : AppCompatActivity() {
 
                             //save the chat id for both users
                             val chatUploadData = hashMapOf(
+                                "creator" to currentUser.id,
                                 "chatId" to newChatId,
                                 "timeCreated" to timeCreated
                             )
@@ -272,24 +276,6 @@ class HomePageActivity : AppCompatActivity() {
                                         Toast.makeText(this, "Could not create the chat", Toast.LENGTH_LONG).show()
                                     }
                                 }
-
-                            /*
-                            chatsRef.add(chatData)
-                                .addOnCompleteListener{task->
-                                    if(task.isSuccessful()){
-                                        val chatId = task.result?.id
-                                        if (chatId != null) {
-                                            openChat(currentUser, otherUser, chatId)
-                                        }
-                                        else{
-                                            println("Chat was not found")
-                                        }
-                                    } else{
-                                        Toast.makeText(this, "Could not create the chat", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-
-                             */
                         }
                         //chat already exists, so open it
                         else{
