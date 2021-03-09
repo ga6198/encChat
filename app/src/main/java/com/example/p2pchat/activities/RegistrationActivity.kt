@@ -15,11 +15,7 @@ import com.example.p2pchat.MainActivity
 import com.example.p2pchat.R
 import com.example.p2pchat.utils.AESAlg
 import com.example.p2pchat.utils.CryptoHelper
-import com.example.p2pchat.utils.DatabaseHelper
-import com.example.p2pchat.utils.User
-import com.google.android.gms.tasks.OnCompleteListener
-import com.google.android.gms.tasks.Task
-import com.google.firebase.auth.AuthResult
+import com.example.p2pchat.objects.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.*

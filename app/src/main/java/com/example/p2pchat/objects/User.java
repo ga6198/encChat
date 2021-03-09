@@ -1,9 +1,10 @@
-package com.example.p2pchat.utils;
+package com.example.p2pchat.objects;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.example.p2pchat.MainActivity;
+import com.example.p2pchat.utils.CryptoHelper;
 
 import java.security.*;
 import java.security.cert.X509Certificate;

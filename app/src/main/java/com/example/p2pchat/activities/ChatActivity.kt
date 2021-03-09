@@ -5,17 +5,15 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.*
 import com.example.p2pchat.R
-import com.example.p2pchat.utils.Chat
-import com.example.p2pchat.utils.ChatMessage
-import com.example.p2pchat.utils.User
+import com.example.p2pchat.objects.Chat
+import com.example.p2pchat.objects.ChatMessage
+import com.example.p2pchat.objects.User
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.*
 import android.database.DataSetObserver
 import android.widget.AbsListView
-import com.example.p2pchat.utils.ChatArrayAdapter
-import com.google.firebase.firestore.FirebaseFirestoreSettings
-
+import com.example.p2pchat.adapters.ChatMessageArrayAdapter
 
 
 class ChatActivity : AppCompatActivity() {
@@ -51,7 +49,10 @@ class ChatActivity : AppCompatActivity() {
         /*
         chat adapter
         */
-        val chatArrayAdapter = ChatArrayAdapter(applicationContext, R.layout.my_message)
+        val chatArrayAdapter = ChatMessageArrayAdapter(
+            applicationContext,
+            R.layout.my_message
+        )
         val listView = findViewById(R.id.messages_view) as ListView
         listView.adapter = chatArrayAdapter
         listView.transcriptMode = AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL

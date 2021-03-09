@@ -1,6 +1,5 @@
 package com.example.p2pchat
 
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
@@ -16,7 +15,7 @@ import com.example.p2pchat.activities.RegistrationActivity
 import com.example.p2pchat.utils.AESAlg
 import com.example.p2pchat.utils.CryptoHelper
 
-import com.example.p2pchat.utils.User
+import com.example.p2pchat.objects.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings

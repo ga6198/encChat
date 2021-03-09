@@ -1,4 +1,4 @@
-package com.example.p2pchat.utils;
+package com.example.p2pchat.objects;
 
 import com.google.firebase.Timestamp;
 

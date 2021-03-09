@@ -1,4 +1,4 @@
-package com.example.p2pchat.utils;
+package com.example.p2pchat.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -8,11 +8,12 @@ import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import com.example.p2pchat.R;
+import com.example.p2pchat.objects.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ChatArrayAdapter extends ArrayAdapter<ChatMessage> {
+public class ChatMessageArrayAdapter extends ArrayAdapter<ChatMessage> {
 
     private TextView chatText;
     private List<ChatMessage> chatMessageList = new ArrayList<ChatMessage>();
@@ -31,7 +32,7 @@ public class ChatArrayAdapter extends ArrayAdapter<ChatMessage> {
         return false;
     }
 
-    public ChatArrayAdapter(Context context, int textViewResourceId) {
+    public ChatMessageArrayAdapter(Context context, int textViewResourceId) {
         super(context, textViewResourceId);
         this.context = context;
     }

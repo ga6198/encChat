@@ -3,27 +3,88 @@ package com.example.p2pchat.activities
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.p2pchat.R
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.DocumentSnapshot
-import androidx.core.app.ComponentActivity.ExtraData
-import androidx.core.content.ContextCompat.getSystemService
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
+import android.util.Log
+import android.widget.AbsListView
+import android.widget.ListView
+import com.example.p2pchat.adapters.ChatListArrayAdapter
+import com.example.p2pchat.objects.Chat
 import com.example.p2pchat.utils.CryptoHelper
 import com.example.p2pchat.utils.KeyType
-import com.example.p2pchat.utils.User
-
+import com.example.p2pchat.objects.User
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Transaction
+import java.util.*
 
 class HomePageActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home_page)
+
+        //get current user data
+        val extras = getIntent().extras
+        val currentUsername = extras?.getString("username")
+        val currentId = extras?.getString("userId")
+        val currentUser = User()
+        currentUser.id = currentId
+        currentUser.username = currentUsername
+
+        /*
+        chat adapter: can reuse the ChatMessageArrayAdapter class with diff valuesf
+         */
+        val chatArrayAdapter = ChatListArrayAdapter(
+            applicationContext,
+            R.layout.chat_preview
+        )
+        val listView = findViewById(R.id.chats) as ListView
+        listView.adapter = chatArrayAdapter
+        listView.transcriptMode = AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL
+        listView.adapter = chatArrayAdapter
+
+        //load the user's existing chats
+        val db = FirebaseFirestore.getInstance()
+        val chatsRef = db.collection("chats")
+
+        //TODO: Fix this query. It does not work because it must be indexed
+        chatsRef.whereEqualTo("members.${currentUser.id}", true)
+            .orderBy("lastMessageTime").addSnapshotListener{value, error ->
+                if (error != null) {
+                    Log.w("HomePageActivity.kt", "Listen failed.", error)
+                    return@addSnapshotListener
+                }
+
+                for (doc in value!!) {
+                    //get the chat objects
+
+                    /*
+                    TODO: When writing a new message to the database,
+                    save the lastUsername, lastMessage, and lastMessageTime
+                     */
+
+                    val chatData = doc.getData()
+
+                    /*
+                    val chat = Chat(doc.id,
+                        chatData["lastUsername"] as String?,
+                        chatData["lastMessage"] as String?,
+                        chatData["lastMessageTime"] as Timestamp?)
+
+                     */
+                    val chat = Chat(doc.id)
+
+                    //TODO: Add chat to the adapter
+                    if(!chatArrayAdapter.contains(chat)){
+                        chatArrayAdapter.add(chat)
+                    }
+                }
+
+            }
 
         //set onclicks
         onClick()
@@ -165,13 +226,54 @@ class HomePageActivity : AppCompatActivity() {
                     if (returnedSnapshot != null) {
                         //if the chat does not exist, create it
                         if(returnedSnapshot.isEmpty()){
+
                             //save new message document to the database
+                            val timeCreated = Timestamp.now()
                             val chatData = hashMapOf(
+                                "timeCreated" to timeCreated,
                                 "members" to hashMapOf(
                                     currentUser.id to true,
                                     otherUser.id to true
                                 ) //listOf<String>(currentUser.id, otherUser.id)
                             )
+
+                            //create a new chat reference
+                            //the chat id is the combination of two user's ids
+                            val newChatId = currentUser.id + otherUser.id
+                            val newChatRef = chatsRef.document(newChatId)
+
+                            //save the chat id for both users
+                            val chatUploadData = hashMapOf(
+                                "chatId" to newChatId,
+                                "timeCreated" to timeCreated
+                            )
+                            val usersRef = db.collection("users")
+                            val currentUserRef = usersRef.document(currentUser.id).collection("usersChats").document(newChatId)
+                            val otherUserRef = usersRef.document(otherUser.id).collection("usersChats").document(newChatId)
+
+                            db.runTransaction{transaction ->
+                                //add to the chats collection
+                                transaction.set(newChatRef, chatData)
+
+                                //save the chat data for users
+                                transaction.set(currentUserRef, chatUploadData)
+                                transaction.set(otherUserRef, chatUploadData)
+                            }
+                                .addOnCompleteListener{
+                                    if(task.isSuccessful()){
+                                        val chatId = newChatId //task.result?.id
+                                        if (chatId != null) {
+                                            openChat(currentUser, otherUser, chatId)
+                                        }
+                                        else{
+                                            println("Chat was not found")
+                                        }
+                                    } else{
+                                        Toast.makeText(this, "Could not create the chat", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+
+                            /*
                             chatsRef.add(chatData)
                                 .addOnCompleteListener{task->
                                     if(task.isSuccessful()){
@@ -186,6 +288,8 @@ class HomePageActivity : AppCompatActivity() {
                                         Toast.makeText(this, "Could not create the chat", Toast.LENGTH_LONG).show()
                                     }
                                 }
+
+                             */
                         }
                         //chat already exists, so open it
                         else{
