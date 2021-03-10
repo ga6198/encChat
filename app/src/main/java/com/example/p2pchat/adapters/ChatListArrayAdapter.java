@@ -63,13 +63,13 @@ public class ChatListArrayAdapter extends ArrayAdapter<Chat> {
         if (ChatObj.getLastUsername() == null) {
             usernameText.setText("Chat");
         } else {
-            usernameText.setText(ChatObj.getLastUsername());
+            usernameText.setText(ChatObj.getOtherUserUsername());
         }
 
         if (ChatObj.getLastMessage() == null) {
             latestMessageText.setText("Chatting");
         } else {
-            latestMessageText.setText(ChatObj.getLastMessage());
+            latestMessageText.setText(ChatObj.getLastUsername() + ": " + ChatObj.getLastMessage());
         }
 
         if (ChatObj.getLastMessageTime() == null) {
@@ -81,10 +81,10 @@ public class ChatListArrayAdapter extends ArrayAdapter<Chat> {
                 Date chatDateWithoutTime = sdf.parse(sdf.format(ChatObj.getLastMessageTime()));
 
                 if(currentDateWithoutTime.equals(chatDateWithoutTime)){
-                    usernameText.setText("Today");
+                    dateText.setText("Today");
                 }
                 else{
-                    usernameText.setText(chatDateWithoutTime.toString());
+                    dateText.setText(sdf.format(chatDateWithoutTime));
                 }
             } catch (ParseException e) {
                 e.printStackTrace();

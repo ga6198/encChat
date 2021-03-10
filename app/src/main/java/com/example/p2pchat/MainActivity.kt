@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.util.Patterns
 import android.widget.Button
 import android.widget.TextView
@@ -96,6 +97,9 @@ class MainActivity : AppCompatActivity() {
                 mAuth.signInWithEmailAndPassword(usernameInput, passwordInput).addOnCompleteListener {
                     if(it.isSuccessful()){
                         val userId = FirebaseAuth.getInstance().currentUser!!.uid
+
+                        Log.d("MainActivity.kt", "Current userId: ${userId}")
+                        Log.d("MainActivity.kt", "Current username: ${usernameInput}")
 
                         //redirect to main page
                         val intent = Intent(this, HomePageActivity::class.java)

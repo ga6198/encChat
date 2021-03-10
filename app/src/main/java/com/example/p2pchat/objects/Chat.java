@@ -10,6 +10,8 @@ public class Chat {
     private String lastUsername;
     private String lastMessage;
     private Date lastMessageTime;
+    private String otherUserId;
+    private String otherUserUsername;
 
     public Chat(){
         setId("");
@@ -19,11 +21,13 @@ public class Chat {
         setId(id);
     }
 
-    public Chat(String id, String lastUsername, String lastMessage, Timestamp lastMessageTime){
+    public Chat(String id, String lastUsername, String lastMessage, Timestamp lastMessageTime, String otherUserId, String otherUserUsername){
         setId(id);
         setLastMessage(lastMessage);
         setLastUsername(lastUsername);
         setLastMessageTime(lastMessageTime.toDate());
+        setOtherUserId(otherUserId);
+        setOtherUserUsername(otherUserUsername);
     }
 
     /*
@@ -77,6 +81,14 @@ public class Chat {
         return lastMessageTime;
     }
 
+    public String getOtherUserId() {
+        return otherUserId;
+    }
+
+    public String getOtherUserUsername() {
+        return otherUserUsername;
+    }
+
     public void setId(String id) {
         this.id = id;
     }
@@ -91,5 +103,13 @@ public class Chat {
 
     public void setLastUsername(String lastUsername) {
         this.lastUsername = lastUsername;
+    }
+
+    public void setOtherUserId(String otherUserId) {
+        this.otherUserId = otherUserId;
+    }
+
+    public void setOtherUserUsername(String otherUserUsername) {
+        this.otherUserUsername = otherUserUsername;
     }
 }

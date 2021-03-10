@@ -24,7 +24,13 @@
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:itemIconTint="@color/cardview_dark_background"
+        app:itemTextColor="@color/cardview_dark_background"
+        app:menu="@menu/bottom_nav_menu"
+        android:background="@color/colorPrimary"
+        />
+    <!-- android:background set to same color as bar so it looks like it extends full width -->
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"

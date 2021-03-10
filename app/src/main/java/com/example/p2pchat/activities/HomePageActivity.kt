@@ -13,6 +13,7 @@ import android.util.Log
 import android.widget.AbsListView
 import android.widget.ListView
 import com.example.p2pchat.adapters.ChatListArrayAdapter
+import com.example.p2pchat.adapters.NavigationBar
 import com.example.p2pchat.objects.Chat
 import com.example.p2pchat.utils.CryptoHelper
 import com.example.p2pchat.utils.KeyType
@@ -35,8 +36,11 @@ class HomePageActivity : AppCompatActivity() {
         currentUser.id = currentId
         currentUser.username = currentUsername
 
+        //Bottom navigation menu
+        val navigationBar = NavigationBar(this)
+
         /*
-        chat adapter: can reuse the ChatMessageArrayAdapter class with diff valuesf
+        existing chats list adapter
          */
         val chatArrayAdapter = ChatListArrayAdapter(
             applicationContext,
@@ -46,15 +50,39 @@ class HomePageActivity : AppCompatActivity() {
         listView.adapter = chatArrayAdapter
         listView.transcriptMode = AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL
         listView.adapter = chatArrayAdapter
+        listView.setOnItemClickListener{parent, view, position, id ->
+            val clickedChat = parent.getItemAtPosition(position) as Chat // the chat that was clicked
+
+            //need to figure out how to get other user's data to open the chat
+            //openChat(currentUser, , clickedChat.id)
+
+            //query for the other user's information and then open the chat in the onComplete
+            val db = FirebaseFirestore.getInstance()
+            db.collection("users").document(clickedChat.otherUserId).get().addOnCompleteListener{task->
+                if(task.isSuccessful()){
+                    val otherUserData = task.result
+                    val otherUser = User()
+                    if (otherUserData != null) {
+                        otherUser.id = otherUserData.id
+                    }
+                    otherUser.username = otherUserData?.get("username") as String?
+
+                    //open the chat
+                    openChat(currentUser, otherUser, clickedChat.id)
+                }
+                else{
+                    Log.d("HomePageActivity.kt", "Searching for other user failed")
+                }
+            }
+
+        }
 
         //load the user's existing chats
         val db = FirebaseFirestore.getInstance()
         val chatsRef = db.collection("chats")
         val usersChatsRef = db.collection("users").document(currentUser.id).collection("usersChats")
 
-        //TODO: Fix this query. It does not work because it must be indexed
-        //chatsRef.whereEqualTo("members.${currentUser.id}", true)
-        //    .orderBy("lastMessageTime").addSnapshotListener{value, error ->
+        //TODO: Add onclicks so each chat opens
         usersChatsRef.orderBy("lastMessageTime").addSnapshotListener{value, error ->
                 if (error != null) {
                     Log.w("HomePageActivity.kt", "Listen failed.", error)
@@ -64,24 +92,22 @@ class HomePageActivity : AppCompatActivity() {
                 for (doc in value!!) {
                     //get the chat objects
 
-                    /*
-                    TODO: When writing a new message to the database,
-                    save the lastUsername, lastMessage, and lastMessageTime
-                     */
-
                     val chatData = doc.getData()
 
 
                     val chat = Chat(doc.id,
                         chatData["lastUsername"] as String?,
                         chatData["lastMessage"] as String?,
-                        chatData["lastMessageTime"] as Timestamp?)
+                        chatData["lastMessageTime"] as Timestamp?,
+                        chatData["otherUserId"] as String?,
+                        chatData["otherUserUsername"] as String?)
 
 
                     //val chat = Chat(doc.id)
 
                     //TODO: Add chat to the adapter
                     if(!chatArrayAdapter.contains(chat)){
+                        //need to pass an onclick function
                         chatArrayAdapter.add(chat)
                     }
                 }

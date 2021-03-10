@@ -185,11 +185,24 @@ class ChatActivity : AppCompatActivity() {
                 )
 
                 //create another map with the same data for saving to the usersChats collection
-                val lastMessageData = hashMapOf<String, Any>(
+                val currentUserLastMessageData = hashMapOf<String, Any>(
                     "lastMessageTime" to currentTime,
                     "lastMessage" to sendInput,
                     "lastSenderId" to currentUser.id,
-                    "lastUsername" to currentUser.username
+                    "lastUsername" to currentUser.username,
+                    "currentUserId" to currentUser.id,
+                    "otherUserId" to otherUser.id,
+                    "otherUserUsername" to otherUser.username
+                )
+
+                val otherUserLastMessageData = hashMapOf<String, Any>(
+                    "lastMessageTime" to currentTime,
+                    "lastMessage" to sendInput,
+                    "lastSenderId" to currentUser.id,
+                    "lastUsername" to currentUser.username,
+                    "currentUserId" to otherUser.id,
+                    "otherUserId" to currentUser.id,
+                    "otherUserUsername" to currentUser.username
                 )
 
                 //generate a new document reference for a message, with a new id
@@ -207,8 +220,8 @@ class ChatActivity : AppCompatActivity() {
                     transaction.set(newMessageRef, messageData)
 
                     //save the last chat message data for users
-                    transaction.update(currentUserRef, lastMessageData)
-                    transaction.update(otherUserRef, lastMessageData)
+                    transaction.update(currentUserRef, currentUserLastMessageData)
+                    transaction.update(otherUserRef, otherUserLastMessageData)
                 }
 
                 //write the message to the database
