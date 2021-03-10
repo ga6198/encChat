@@ -69,7 +69,14 @@ public class ChatListArrayAdapter extends ArrayAdapter<Chat> {
         if (ChatObj.getLastMessage() == null) {
             latestMessageText.setText("Chatting");
         } else {
-            latestMessageText.setText(ChatObj.getLastUsername() + ": " + ChatObj.getLastMessage());
+            //if the chat is the other person's, display the other person's name
+            if(ChatObj.getLastUsername().equals(ChatObj.getOtherUserUsername())){
+                latestMessageText.setText(ChatObj.getLastUsername() + ": " + ChatObj.getLastMessage());
+            }
+            //else if the chat is yours, display "You"
+            else{
+                latestMessageText.setText("You: " + ChatObj.getLastMessage());
+            }
         }
 
         if (ChatObj.getLastMessageTime() == null) {

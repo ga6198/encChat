@@ -40,7 +40,7 @@ class ChatActivity : AppCompatActivity() {
         val otherId = extras?.getString("otherUserId")
         val otherUser = User()
         otherUser.id = otherId
-        currentUser.username = otherUsername
+        otherUser.username = otherUsername
 
         //change the header for the chat
         val usernameTextView = findViewById<TextView>(R.id.usernameText)

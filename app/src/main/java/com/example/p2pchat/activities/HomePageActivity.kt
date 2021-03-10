@@ -53,9 +53,6 @@ class HomePageActivity : AppCompatActivity() {
         listView.setOnItemClickListener{parent, view, position, id ->
             val clickedChat = parent.getItemAtPosition(position) as Chat // the chat that was clicked
 
-            //need to figure out how to get other user's data to open the chat
-            //openChat(currentUser, , clickedChat.id)
-
             //query for the other user's information and then open the chat in the onComplete
             val db = FirebaseFirestore.getInstance()
             db.collection("users").document(clickedChat.otherUserId).get().addOnCompleteListener{task->
@@ -82,7 +79,34 @@ class HomePageActivity : AppCompatActivity() {
         val chatsRef = db.collection("chats")
         val usersChatsRef = db.collection("users").document(currentUser.id).collection("usersChats")
 
-        //TODO: Add onclicks so each chat opens
+        usersChatsRef.orderBy("lastMessageTime").get()
+            .addOnCompleteListener{task->
+                if(task.isSuccessful()){
+                    val chats = task.result
+
+                    for (doc in chats!!){
+                        val chatData = doc.getData()
+
+
+                        val chat = Chat(doc.id,
+                            chatData["lastUsername"] as String?,
+                            chatData["lastMessage"] as String?,
+                            chatData["lastMessageTime"] as Timestamp?,
+                            chatData["otherUserId"] as String?,
+                            chatData["otherUserUsername"] as String?)
+
+                        if(!chatArrayAdapter.contains(chat)){
+                            //need to pass an onclick function
+                            chatArrayAdapter.add(chat)
+                        }
+                    }
+                }
+                else{
+                    Log.w("HomePageActivity.kt", "Chat retrieval failed", task.exception)
+                }
+            }
+
+        /*
         usersChatsRef.orderBy("lastMessageTime").addSnapshotListener{value, error ->
                 if (error != null) {
                     Log.w("HomePageActivity.kt", "Listen failed.", error)
@@ -113,6 +137,8 @@ class HomePageActivity : AppCompatActivity() {
                 }
 
             }
+
+         */
 
         //set onclicks
         onClick()
