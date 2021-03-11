@@ -24,17 +24,23 @@ import java.util.*
 
 class HomePageActivity : AppCompatActivity() {
 
+    var currentUser: User? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home_page)
 
         //get current user data
         val extras = getIntent().extras
+        /*
         val currentUsername = extras?.getString("username")
         val currentId = extras?.getString("userId")
         val currentUser = User()
         currentUser.id = currentId
         currentUser.username = currentUsername
+         */
+        currentUser = extras?.getParcelable<User>("user")
+
 
         //Bottom navigation menu
         val navigationBar = NavigationBar(this)
@@ -65,7 +71,7 @@ class HomePageActivity : AppCompatActivity() {
                     otherUser.username = otherUserData?.get("username") as String?
 
                     //open the chat
-                    openChat(currentUser, otherUser, clickedChat.id)
+                    currentUser?.let { openChat(it, otherUser, clickedChat.id) }
                 }
                 else{
                     Log.d("HomePageActivity.kt", "Searching for other user failed")
@@ -77,7 +83,7 @@ class HomePageActivity : AppCompatActivity() {
         //load the user's existing chats
         val db = FirebaseFirestore.getInstance()
         val chatsRef = db.collection("chats")
-        val usersChatsRef = db.collection("users").document(currentUser.id).collection("usersChats")
+        val usersChatsRef = db.collection("users").document(currentUser?.id.toString()).collection("usersChats")
 
         usersChatsRef.orderBy("lastMessageTime").get()
             .addOnCompleteListener{task->
@@ -174,8 +180,9 @@ class HomePageActivity : AppCompatActivity() {
 
 
             //check if the current user is the same as the desired user
-            val extras = getIntent().extras
-            val currentUsername = extras?.getString("username")
+            //val extras = getIntent().extras
+            //val currentUsername = extras?.getString("username")
+            val currentUsername = currentUser?.username
 
             if (currentUsername.equals(usernameInput)){
                 Toast.makeText(this, "Cannot choose yourself", Toast.LENGTH_LONG).show()
@@ -251,14 +258,17 @@ class HomePageActivity : AppCompatActivity() {
 
             //get current user data
             val extras = getIntent().extras
+            /*
             val currentUsername = extras?.getString("username")
             val currentId = extras?.getString("userId")
             val currentUser = User()
             currentUser.id = currentId
             currentUser.username = currentUsername
 
+             */
+
             //for now, just directly opening a chat
-            createChat(currentUser, user)
+            currentUser?.let { createChat(it, user) }
         }
 
         builder.show()

@@ -38,6 +38,10 @@ public class NavigationBar {
         );
     }
 
+    private void openPage(){
+
+    }
+
     public Activity getActivity() {
         return activity;
     }

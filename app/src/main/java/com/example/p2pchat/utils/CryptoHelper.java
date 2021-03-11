@@ -33,9 +33,15 @@ public class CryptoHelper {
      * @return String - The base64 encoded key.03
      */
     static public String encodeKey(Key key){
-        byte[] keyBytes = key.getEncoded();
-        String keyStr = Base64.encodeToString(keyBytes, Base64.DEFAULT);
-        return keyStr;
+        try {
+            byte[] keyBytes = key.getEncoded();
+            String keyStr = Base64.encodeToString(keyBytes, Base64.DEFAULT);
+            return keyStr;
+        }
+        catch (NullPointerException e){
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**
@@ -45,22 +51,28 @@ public class CryptoHelper {
      * @return Key - The public or private key
      */
     static public Key decodeKey(String keyStr, KeyType keyType) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        byte[] sigBytes = Base64.decode(keyStr, Base64.DEFAULT);
+        try {
+            byte[] sigBytes = Base64.decode(keyStr, Base64.DEFAULT);
 
-        X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(sigBytes);
-        KeyFactory keyFact = null;
-        keyFact = KeyFactory.getInstance("RSA");
+            X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(sigBytes);
+            KeyFactory keyFact = null;
+            keyFact = KeyFactory.getInstance("RSA");
 
-        Key key = null;
-        //creates a public key
-        if (keyType == KeyType.PUBLIC){
-            key = keyFact.generatePublic(x509KeySpec);
+            Key key = null;
+            //creates a public key
+            if (keyType == KeyType.PUBLIC) {
+                key = keyFact.generatePublic(x509KeySpec);
+            }
+            //creates a private key
+            else if (keyType == KeyType.PRIVATE) {
+                key = keyFact.generatePrivate(x509KeySpec);
+            }
+            return key;
         }
-        //creates a private key
-        else if (keyType == KeyType.PRIVATE){
-            key = keyFact.generatePrivate(x509KeySpec);
+        catch (NullPointerException e){
+            e.printStackTrace();
+            return null;
         }
-        return key;
     }
 
     //Generates public/private key pair
