@@ -88,6 +88,14 @@ public class User implements Parcelable {
         }
     }
 
+    public String getEncodedPublicKey(){
+        return CryptoHelper.encodeKey(publicKey);
+    }
+
+    public String getEncodedPrivateKey(){
+        return CryptoHelper.encodeKey(privateKey);
+    }
+
     public String getId() {
         return id;
     }

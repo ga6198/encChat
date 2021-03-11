@@ -21,6 +21,7 @@ import javax.crypto.spec.*;
 import java.security.*;
 import java.lang.Exception;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 public class CryptoHelper {
@@ -30,7 +31,7 @@ public class CryptoHelper {
     /**
      * Base64 encodes a public or private key
      * @param key - Any Key
-     * @return String - The base64 encoded key.03
+     * @return String - The base64 encoded key.
      */
     static public String encodeKey(Key key){
         try {
@@ -53,19 +54,18 @@ public class CryptoHelper {
     static public Key decodeKey(String keyStr, KeyType keyType) throws NoSuchAlgorithmException, InvalidKeySpecException {
         try {
             byte[] sigBytes = Base64.decode(keyStr, Base64.DEFAULT);
-
-            X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(sigBytes);
-            KeyFactory keyFact = null;
-            keyFact = KeyFactory.getInstance("RSA");
+            KeyFactory keyFact = KeyFactory.getInstance("RSA");
 
             Key key = null;
             //creates a public key
             if (keyType == KeyType.PUBLIC) {
+                X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(sigBytes);
                 key = keyFact.generatePublic(x509KeySpec);
             }
             //creates a private key
             else if (keyType == KeyType.PRIVATE) {
-                key = keyFact.generatePrivate(x509KeySpec);
+                PKCS8EncodedKeySpec pkcs8KeySpec = new PKCS8EncodedKeySpec(sigBytes);
+                key = keyFact.generatePrivate(pkcs8KeySpec);
             }
             return key;
         }

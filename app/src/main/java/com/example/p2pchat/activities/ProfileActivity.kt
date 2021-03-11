@@ -8,6 +8,7 @@ import android.widget.Button
 import com.example.p2pchat.MainActivity
 import com.example.p2pchat.R
 import com.example.p2pchat.adapters.NavigationBar
+import com.example.p2pchat.adapters.ProfileView
 import com.example.p2pchat.objects.User
 import com.google.firebase.auth.FirebaseAuth
 
@@ -27,6 +28,9 @@ class ProfileActivity : AppCompatActivity() {
 
         //set up the bottom navigation menu
         val navigationBar = NavigationBar(this)
+
+        //set up the profile view
+        val profileView = ProfileView(this, currentUser)
 
         //setup onclicks
         onClick()
