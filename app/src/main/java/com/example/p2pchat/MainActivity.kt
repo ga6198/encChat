@@ -101,4 +101,9 @@ class MainActivity : AppCompatActivity() {
 
         }
     }
+
+    //ensures that pressing the "back" button will close the app instead of going to previous activities
+    override fun onBackPressed() {
+        moveTaskToBack(true);
+    }
 }

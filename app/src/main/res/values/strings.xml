@@ -6,4 +6,7 @@
     <string name="button_label">Send</string>
     <string name="toast_message">Hurray</string>
     <string name="input_placeholder">Write a message</string>
+    <string name="chat_page_title">Chats</string>
+    <string name="profile_page_title">Profile</string>
+    <string name="signout_button_label">Sign Out</string>
 </resources>
