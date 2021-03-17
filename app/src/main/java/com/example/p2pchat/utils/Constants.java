@@ -5,5 +5,5 @@ public class Constants {
         // restrict instantiation
     }
 
-    static public final String KEYSTORE_ALIAS = "secretKey";
+    static public final String KEYSTORE_ALIAS = "AndroidKeyStore";
 }

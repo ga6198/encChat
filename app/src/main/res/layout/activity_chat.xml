@@ -62,8 +62,10 @@
             android:ems="10"
             android:hint="Write a message"
             android:inputType="text"
+            android:maxLength="120"
             android:paddingHorizontal="10dp"
             android:text=""
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/sendButton"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -76,6 +78,7 @@
             android:background="@drawable/ic_send_black_24dp"
             android:padding="20dp"
             android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/sendText"
             app:layout_constraintTop_toTopOf="@+id/sendText" />

@@ -32,13 +32,6 @@ class HomePageActivity : AppCompatActivity() {
 
         //get current user data
         val extras = getIntent().extras
-        /*
-        val currentUsername = extras?.getString("username")
-        val currentId = extras?.getString("userId")
-        val currentUser = User()
-        currentUser.id = currentId
-        currentUser.username = currentUsername
-         */
         currentUser = extras?.getParcelable<User>("user")
 
 
@@ -69,6 +62,8 @@ class HomePageActivity : AppCompatActivity() {
                         otherUser.id = otherUserData.id
                     }
                     otherUser.username = otherUserData?.get("username") as String?
+                    val publicKeyString = otherUserData?.get("publicKey") as String?
+                    otherUser.publicKey = CryptoHelper.decodeKey(publicKeyString, KeyType.PUBLIC)
 
                     //open the chat
                     currentUser?.let { openChat(it, otherUser, clickedChat.id) }
@@ -111,40 +106,6 @@ class HomePageActivity : AppCompatActivity() {
                     Log.w("HomePageActivity.kt", "Chat retrieval failed", task.exception)
                 }
             }
-
-        /*
-        usersChatsRef.orderBy("lastMessageTime").addSnapshotListener{value, error ->
-                if (error != null) {
-                    Log.w("HomePageActivity.kt", "Listen failed.", error)
-                    return@addSnapshotListener
-                }
-
-                for (doc in value!!) {
-                    //get the chat objects
-
-                    val chatData = doc.getData()
-
-
-                    val chat = Chat(doc.id,
-                        chatData["lastUsername"] as String?,
-                        chatData["lastMessage"] as String?,
-                        chatData["lastMessageTime"] as Timestamp?,
-                        chatData["otherUserId"] as String?,
-                        chatData["otherUserUsername"] as String?)
-
-
-                    //val chat = Chat(doc.id)
-
-                    //TODO: Add chat to the adapter
-                    if(!chatArrayAdapter.contains(chat)){
-                        //need to pass an onclick function
-                        chatArrayAdapter.add(chat)
-                    }
-                }
-
-            }
-
-         */
 
         //set onclicks
         onClick()
@@ -241,9 +202,9 @@ class HomePageActivity : AppCompatActivity() {
         val usernameDisplay = view.findViewById<TextView>(R.id.usernameText)
         usernameDisplay?.setText(user.username)
 
-        //TODO: modify public key format. right now it displays object data
+        //show public key
         val publicKeyDisplay = view.findViewById<TextView>(R.id.publicKeyText)
-        publicKeyDisplay?.setText(user.publicKey.toString())
+        publicKeyDisplay?.setText(user.encodedPublicKey) //publicKeyDisplay?.setText(user.publicKey.toString())
 
         builder.setView(view)
         builder.setTitle("Confirm User")
@@ -352,12 +313,9 @@ class HomePageActivity : AppCompatActivity() {
 
     fun openChat(currentUser: User, otherUser: User, chatId: String){
         val intent = Intent(this, ChatActivity::class.java)
-        //id can be retrieved with the firebaseauth, but saving to the intent is fine as well
 
-        intent.putExtra("userId", currentUser.id)
-        intent.putExtra("username", currentUser.username)
-        intent.putExtra("otherUserId", otherUser.id)
-        intent.putExtra("otherUsername", otherUser.username)
+        intent.putExtra("user", currentUser)
+        intent.putExtra("otherUser", otherUser)
 
         intent.putExtra("chatId", chatId)
 

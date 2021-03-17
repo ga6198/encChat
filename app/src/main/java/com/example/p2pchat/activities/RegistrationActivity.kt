@@ -16,6 +16,7 @@ import com.example.p2pchat.R
 import com.example.p2pchat.utils.AESAlg
 import com.example.p2pchat.utils.CryptoHelper
 import com.example.p2pchat.objects.User
+import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.*
@@ -76,22 +77,7 @@ class RegistrationActivity : AppCompatActivity() {
                 var newUser = User(usernameInput)
                 newUser.password = passwordInput
 
-                //TODO: Upload user + public key to firebase
                 registerUser(newUser)
-
-
-                //Need to pass a user id, so sharedPref differs for users
-                //Save the user info to shared preferences
-                //saveToSharedPreferences(sharedPref, newUser)
-
-
-
-
-
-                //Redirect to home page activity
-                //val intent = Intent(this, HomePageActivity::class.java)
-                //startActivity(intent)
-
             }
         }
     }
@@ -103,8 +89,6 @@ class RegistrationActivity : AppCompatActivity() {
 
             if(it.isSuccessful){
                 //save the user to the database
-                //val db = DatabaseHelper()
-               // db.saveUser(user)
                 saveUser(user)
             }
             else{
@@ -128,10 +112,6 @@ class RegistrationActivity : AppCompatActivity() {
             "publicKey" to CryptoHelper.encodeKey(newUser.publicKey)
         )
 
-        //HashMap<String, Any>()
-        //user["username"] = newUser.username
-        //user["publicKey"] = CryptoHelper.encodeKey(newUser.publicKey)
-
         println(user["publicKey"])
 
         //used "set" to create document with specific id
@@ -143,16 +123,30 @@ class RegistrationActivity : AppCompatActivity() {
                     //Save the user's information to SharedPreferences, with Firebase userid
                     //get values from User Data from sharedpreferences
                     newUser.id = userId
+                    /*
                     val sharedPref = getSharedPreferences(
                         getString(R.string.preference_file_key), Context.MODE_PRIVATE)
                     saveToSharedPreferences(sharedPref, newUser)
 
-                    //Redirect inside the app and save user data
-                    val intent = Intent(this, HomePageActivity::class.java)
-                    //id can be retrieved with the firebaseauth, but saving to the intent is fine as well
-                    intent.putExtra("userId", newUser.id)
-                    intent.putExtra("username", newUser.username)
-                    startActivity(intent)
+                     */
+                    try {
+                        val sharedPrefHandler = SharedPreferencesHandler(this)
+                        sharedPrefHandler.saveUser(newUser)
+
+                        //Redirect inside the app and save user data
+                        val intent = Intent(this, HomePageActivity::class.java)
+                        //id can be retrieved with the firebaseauth, but saving to the intent is fine as well
+                        intent.putExtra("user", newUser)
+                        startActivity(intent)
+                    }
+                    catch (e: Exception){
+                        e.printStackTrace()
+
+                        Toast.makeText(this, "SharedPreferences: Error with saving data.\nPlease register again", Toast.LENGTH_LONG).show()
+
+                        //get rid of the database document, since things didn't go correctly. User must register again
+                        db.collection("users").document(userId).delete()
+                    }
                 }
                 else{
                     println(task.exception)
@@ -161,6 +155,7 @@ class RegistrationActivity : AppCompatActivity() {
             }
     }
 
+    /*
     @RequiresApi(Build.VERSION_CODES.O)
     fun saveToSharedPreferences(sharedPref: SharedPreferences, user: User){
         val editor = sharedPref.edit()
@@ -192,4 +187,6 @@ class RegistrationActivity : AppCompatActivity() {
         println("private_key: $encryptedPrvKeyStr")
         println("private_key_iv: $ivStr")
     }
+
+     */
 }

@@ -54,7 +54,7 @@ public class CryptoHelper {
     static public Key decodeKey(String keyStr, KeyType keyType) throws NoSuchAlgorithmException, InvalidKeySpecException {
         try {
             byte[] sigBytes = Base64.decode(keyStr, Base64.DEFAULT);
-            KeyFactory keyFact = KeyFactory.getInstance("RSA");
+            KeyFactory keyFact = KeyFactory.getInstance("DH"); //KeyFactory keyFact = KeyFactory.getInstance("RSA");
 
             Key key = null;
             //creates a public key
@@ -77,7 +77,8 @@ public class CryptoHelper {
 
     //Generates public/private key pair
     static public KeyPair generateKeyPair() throws NoSuchAlgorithmException {
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+        //KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("DH");
         kpg.initialize(2048);
         KeyPair kp = kpg.generateKeyPair();
 
@@ -87,6 +88,65 @@ public class CryptoHelper {
 
         return kp;
     }
+
+    /**
+     * Used to generate secret key for Diffie Hellman key exchange.
+     * The user uses his private key and the other person's public key
+     * @param privateKey - The current user's own private key
+     * @param receivedPublicKey - The other user's public key
+     * @return String - The base64 encoded key.
+     */
+    static public byte[] generateCommonSecretKey(PrivateKey privateKey, PublicKey receivedPublicKey){
+        try {
+            final KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
+            keyAgreement.init(privateKey);
+            keyAgreement.doPhase(receivedPublicKey, true);
+
+            byte [] secretKey = CryptoHelper.shortenSecretKey(keyAgreement.generateSecret()); // The implementation I used had the following: shortenSecretKey(keyAgreement.generateSecret());
+            return secretKey;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * 1024 bit symmetric key size is so big for DES so we must shorten the key size. You can get first 8 longKey of the
+     * byte array or can use a key factory
+     *
+     * @param   longKey
+     *
+     * @return
+     */
+    static private byte[] shortenSecretKey(final byte[] longKey) {
+
+        try {
+
+            // Use 32 bytes (256 bits) for AES
+            final byte[] shortenedKey = new byte[32];
+
+            System.arraycopy(longKey, 0, shortenedKey, 0, shortenedKey.length);
+
+            return shortenedKey;
+
+            // Below lines can be more secure
+            // final SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+            // final DESKeySpec       desSpec    = new DESKeySpec(longKey);
+            //
+            // return keyFactory.generateSecret(desSpec).getEncoded();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    /**
+     * Encrypts a plaintext message to ciphertext
+     * @param userid - used to get AES key and private key from sharedPreferences
+     * @return String - Base64 encoded ciphertext
+     */
+    //need to get AES key first and then get sharedPreferences private key
 
     /*
     static public void saveKeysToSharedPreferences(Context context){

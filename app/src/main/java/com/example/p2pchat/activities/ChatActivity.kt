@@ -14,9 +14,23 @@ import java.util.*
 import android.database.DataSetObserver
 import android.widget.AbsListView
 import com.example.p2pchat.adapters.ChatMessageArrayAdapter
+import com.example.p2pchat.utils.CryptoHelper
+import com.example.p2pchat.utils.RSAAlg
+import com.example.p2pchat.utils.SecretKeyAlg
+import com.example.p2pchat.utils.SharedPreferencesHandler
+import kotlinx.android.synthetic.main.chat_preview.*
+import java.security.PrivateKey
+import java.security.PublicKey
+import java.security.interfaces.RSAPrivateKey
+import java.security.interfaces.RSAPublicKey
 
 
 class ChatActivity : AppCompatActivity() {
+
+    var currentUser: User? = null
+    var otherUser: User? = null
+    var chatId: String? = null
+    var secretKey: ByteArray? = null //holds the secret key the two users will use
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,26 +39,22 @@ class ChatActivity : AppCompatActivity() {
         val extras = getIntent().extras
 
         //get chat data
-        val chatId = extras?.getString("chatId")
+        chatId = extras?.getString("chatId")
         val chat = Chat(chatId)
 
         //get current user data
-        val currentUsername = extras?.getString("username")
-        val currentId = extras?.getString("userId")
-        val currentUser = User()
-        currentUser.id = currentId
-        currentUser.username = currentUsername
-
+        currentUser = extras?.getParcelable<User>("user")
         //get other user data
-        val otherUsername = extras?.getString("otherUsername")
-        val otherId = extras?.getString("otherUserId")
-        val otherUser = User()
-        otherUser.id = otherId
-        otherUser.username = otherUsername
+        otherUser = extras?.getParcelable<User>("otherUser")
 
         //change the header for the chat
         val usernameTextView = findViewById<TextView>(R.id.usernameText)
-        usernameTextView.setText(otherUsername)
+        usernameTextView.setText(otherUser?.username) //usernameTextView.setText(otherUsername)
+
+        //establish the secret key for this chat
+        val sharedPrefsHandler = SharedPreferencesHandler(this)
+        currentUser?.privateKey = sharedPrefsHandler.getPrivateKey(currentUser?.id)
+        secretKey = CryptoHelper.generateCommonSecretKey(currentUser?.privateKey as PrivateKey?, otherUser?.publicKey as PublicKey?)
 
         /*
         chat adapter
@@ -70,35 +80,6 @@ class ChatActivity : AppCompatActivity() {
             .document(chat.id)
             .collection("messages")
 
-        /*
-        //load existing messages
-        messagesRef.get().addOnCompleteListener{task->
-            if(task.isSuccessful()){
-                val result = task.result?.documents
-                for (doc in result!!){
-                    val messageData = doc.getData()
-                    var ownMessage = false
-                    if(messageData?.get("senderId")?.equals(currentUser.id)!!){
-                        ownMessage = true
-                    }
-
-                    val message = ChatMessage(
-                        messageData["senderId"] as String?,
-                        messageData["message"] as String?, messageData["time"] as Timestamp?,
-                        ownMessage
-                    )
-                    //messages.add(message)
-                    chatArrayAdapter.add(message)
-                }
-            }
-            else{
-                Log.d("ChatActivity.kt", "Messages were not loaded properly")
-            }
-        }
-
-         */
-
-
         //load messages/set adapter for NEW messages
         //This adapter only needs to update for each SINGLE NEW message
 
@@ -108,48 +89,26 @@ class ChatActivity : AppCompatActivity() {
                 return@addSnapshotListener
             }
 
-            /*
-            if (value != null) {
-                if(!value.isEmpty) {
-                    val newDoc = value.documents[0]
-                    val messageData = newDoc.getData()
-                    var ownMessage = false
-                    if (messageData?.get("senderId")?.equals(currentUser.id)!!) {
-                        ownMessage = true
-                    }
-
-                    val message = ChatMessage(
-                        messageData["senderId"] as String?,
-                        messageData["message"] as String?, messageData["time"] as Timestamp?,
-                        ownMessage
-                    )
-
-                    //TODO: modify this to add the newest message only
-                    chatArrayAdapter.add(message)
-
-                }
-            }
-
-             */
-
-            //array of messages, in time order
-            val messages = ArrayList<ChatMessage>()
-
-
             for (doc in value!!){
 
                 val messageData = doc.getData()
                 var ownMessage = false
-                if(messageData["senderId"]?.equals(currentUser.id)!!){
+                if(messageData["senderId"]?.equals(currentUser?.id)!!){
                     ownMessage = true
+                }
+
+                //decrypt message
+                var decryptedMessage = ""
+                if(messageData["message"] != null) {
+                    decryptedMessage = decryptMessage(messageData["message"] as String)
                 }
 
                 val message = ChatMessage(
                     messageData["senderId"] as String?,
-                    messageData["message"] as String?, messageData["time"] as Timestamp?,
+                    decryptedMessage, //messageData["message"] as String?,
+                    messageData["time"] as Timestamp?,
                     ownMessage
                 )
-                //messages.add(message)
 
                 //if the adapter does not contain the message, then add
                 if(!chatArrayAdapter.contains(message)){
@@ -158,12 +117,16 @@ class ChatActivity : AppCompatActivity() {
             }
         }
 
-
         //onclicks
-        onClick(currentUser, otherUser, chat)
+        if(currentUser != null && otherUser != null){
+            onClick(currentUser!!, otherUser!!, chat)
+        }
+        else{
+            Log.d("ChatActivity.kt", "currentUser or otherUser seem to be null")
+        }
     }
 
-    fun onClick(currentUser: User, otherUser: User, chat: Chat){
+    private fun onClick(currentUser: User, otherUser: User, chat: Chat){
         //send button
         val sendButton = findViewById<ImageButton>(R.id.sendButton)
         val sendText = findViewById<EditText>(R.id.sendText)
@@ -173,70 +136,154 @@ class ChatActivity : AppCompatActivity() {
 
             //if there was text given
             if (sendInput != ""){
-                //data, like time, author
-                //val date = Calendar.getInstance().time
-                val currentTime = Timestamp.now()
-
-                val messageData = hashMapOf<String, Any>(
-                    "time" to currentTime,
-                    "message" to sendInput,
-                    "senderId" to currentUser.id,
-                    "senderUsername" to currentUser.username
-                )
-
-                //create another map with the same data for saving to the usersChats collection
-                val currentUserLastMessageData = hashMapOf<String, Any>(
-                    "lastMessageTime" to currentTime,
-                    "lastMessage" to sendInput,
-                    "lastSenderId" to currentUser.id,
-                    "lastUsername" to currentUser.username,
-                    "currentUserId" to currentUser.id,
-                    "otherUserId" to otherUser.id,
-                    "otherUserUsername" to otherUser.username
-                )
-
-                val otherUserLastMessageData = hashMapOf<String, Any>(
-                    "lastMessageTime" to currentTime,
-                    "lastMessage" to sendInput,
-                    "lastSenderId" to currentUser.id,
-                    "lastUsername" to currentUser.username,
-                    "currentUserId" to otherUser.id,
-                    "otherUserId" to currentUser.id,
-                    "otherUserUsername" to currentUser.username
-                )
-
-                //generate a new document reference for a message, with a new id
-                val db = FirebaseFirestore.getInstance()
-                val newMessageRef = db.collection("chats").document(chat.id).collection("messages").document()
-                val newMessageId = newMessageRef.id
-
-                //write the message to the database
-                val usersRef = db.collection("users")
-                val currentUserRef = usersRef.document(currentUser.id).collection("usersChats").document(chat.id)
-                val otherUserRef = usersRef.document(otherUser.id).collection("usersChats").document(chat.id)
-
-                db.runTransaction{transaction ->
-                    //write the message to the chats collection
-                    transaction.set(newMessageRef, messageData)
-
-                    //save the last chat message data for users
-                    transaction.update(currentUserRef, currentUserLastMessageData)
-                    transaction.update(otherUserRef, otherUserLastMessageData)
-                }
-
-                //write the message to the database
-                /*
-                val db = FirebaseFirestore.getInstance()
-                db.collection("chats")
-                    .document(chat.id)
-                    .collection("messages")
-                    .add(messageData) //no oncomplete really necessary for this
-
-                 */
+                sendMessage(sendInput, currentUser, otherUser, chat)
 
                 //reset text
                 sendText.setText("")
             }
         }
     }
+    
+    private fun sendMessage(message: String, currentUser: User, otherUser: User, chat: Chat){
+        //encrypt the message
+        //val encryptedMessage = encryptMessage(message, currentUser, otherUser)
+        val encryptedMessage = encryptMessage(message)
+
+        //data, like time, author
+        val currentTime = Timestamp.now()
+
+        val messageData = hashMapOf<String, Any>(
+            "time" to currentTime,
+            "message" to encryptedMessage,
+            "senderId" to currentUser.id,
+            "senderUsername" to currentUser.username
+        )
+
+        //create another map with the same data for saving to the usersChats collection
+        val currentUserLastMessageData = hashMapOf<String, Any>(
+            "lastMessageTime" to currentTime,
+            "lastMessage" to encryptedMessage,
+            "lastSenderId" to currentUser.id,
+            "lastUsername" to currentUser.username,
+            "currentUserId" to currentUser.id,
+            "otherUserId" to otherUser.id,
+            "otherUserUsername" to otherUser.username
+        )
+
+        val otherUserLastMessageData = hashMapOf<String, Any>(
+            "lastMessageTime" to currentTime,
+            "lastMessage" to encryptedMessage,
+            "lastSenderId" to currentUser.id,
+            "lastUsername" to currentUser.username,
+            "currentUserId" to otherUser.id,
+            "otherUserId" to currentUser.id,
+            "otherUserUsername" to currentUser.username
+        )
+
+        //generate a new document reference for a message, with a new id
+        val db = FirebaseFirestore.getInstance()
+        val newMessageRef = db.collection("chats").document(chat.id).collection("messages").document()
+        val newMessageId = newMessageRef.id
+
+        //write the message to the database
+        val usersRef = db.collection("users")
+        val currentUserRef = usersRef.document(currentUser.id).collection("usersChats").document(chat.id)
+        val otherUserRef = usersRef.document(otherUser.id).collection("usersChats").document(chat.id)
+
+        db.runTransaction{transaction ->
+            //write the message to the chats collection
+            transaction.set(newMessageRef, messageData)
+
+            //save the last chat message data for users
+            transaction.update(currentUserRef, currentUserLastMessageData)
+            transaction.update(otherUserRef, otherUserLastMessageData)
+        }
+    }
+
+    private fun encryptMessage(message: String): String{
+        //perform the encryption
+        val secretKeyAlg = SecretKeyAlg(secretKey)
+        val encryptedMessageBytes = secretKeyAlg.encrypt(message).get("ciphertext")!!;
+        val encryptedMessage = Base64.getEncoder().encodeToString(encryptedMessageBytes) //TODO: might need to base64 encode
+
+        println("Encrypted Message: ${encryptedMessage}")
+
+        return encryptedMessage;
+    }
+
+    /*
+    private fun encryptMessage(message: String, currentUser: User, otherUser: User): String{
+        //get the receiver's public key
+        val receiverPubKey = otherUser.publicKey as RSAPublicKey
+
+        //useful debugging information
+        val pubKeyLength = receiverPubKey.modulus.bitLength()
+        println("Public Key Length: ${pubKeyLength}")
+        println("Message Length in Bytes: ${message.toByteArray().size}")
+
+        //perform the RSA double encryption
+        val rsaAlg = RSAAlg(receiverPubKey)
+        val encryptedMessageBytes = rsaAlg.encrypt(message).get("ciphertext")!!;
+        val encryptedMessage = String(encryptedMessageBytes)
+
+        return encryptedMessage;
+    }
+
+     */
+
+    /*
+    private fun encryptMessage(message: String, currentUser: User, otherUser: User): String{
+        //get the receiver's public key
+        val receiverPubKey = otherUser.publicKey as RSAPublicKey
+
+        //useful debugging information
+        val pubKeyLength = receiverPubKey.modulus.bitLength()
+        println("Public Key Length: ${pubKeyLength}")
+        println("Message Length in Bytes: ${message.toByteArray().size}")
+
+        //perform the RSA double encryption
+        val rsaAlg = RSAAlg(receiverPubKey)
+        val encryptedMessageBytes = rsaAlg.encrypt(message).get("ciphertext")!!;
+        val encryptedMessage = String(encryptedMessageBytes)
+
+        return encryptedMessage;
+    }
+     */
+
+    private fun decryptMessage(encodedMessage: String): String{
+        //base 64 decode the message
+         val message = Base64.getDecoder().decode(encodedMessage)
+
+        val secretKeyAlg = SecretKeyAlg(secretKey)
+        val plaintext = secretKeyAlg.decrypt(message) //secretKeyAlg.decrypt(message.toByteArray())
+
+        return plaintext
+    }
+
+    //old function, used with double encryption scheme
+/*
+    private fun encryptMessage(message: String, currentUser: User, otherUser: User): String{
+        //get the sender's private key.
+        val sharedPrefsHandler = SharedPreferencesHandler(this)
+        val senderPrvKey = sharedPrefsHandler.getPrivateKey(currentUser.id) as RSAPrivateKey
+
+        //get the receiver's public key
+        val receiverPubKey = otherUser.publicKey as RSAPublicKey
+
+        //useful debugging information
+        val prvKeyLength = senderPrvKey.modulus.bitLength()
+        val pubKeyLength = receiverPubKey.modulus.bitLength()
+        println("Private Key Length: ${prvKeyLength}")
+        println("Public Key Length: ${pubKeyLength}")
+        println("Message Length in Bytes: ${message.toByteArray().size}")
+
+        //perform the RSA double encryption
+        val rsaAlg = RSAAlg(receiverPubKey, senderPrvKey)
+        val encryptedMessageBytes = rsaAlg.encrypt(message).get("ciphertext")!!;
+        val encryptedMessage = String(encryptedMessageBytes)
+
+        return encryptedMessage;
+    }
+
+ */
 }

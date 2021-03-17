@@ -27,6 +27,7 @@ public class User implements Parcelable {
         //this.keys = KeyPair();
     }
 
+    //creates a user and generates keys
     public User(String username) throws NoSuchAlgorithmException {
         this.username = username;
 
@@ -35,6 +36,13 @@ public class User implements Parcelable {
         this.publicKey = keys.getPublic();
         this.privateKey = keys.getPrivate();
 
+    }
+
+    //main constructor used for creating this object class
+    public User(String id, String username, Key publicKey){
+        setId(id);
+        setUsername(username);
+        setPublicKey(publicKey);
     }
 
     // 99.9% of the time you can just ignore this

@@ -17,6 +17,7 @@ import com.example.p2pchat.utils.AESAlg
 import com.example.p2pchat.utils.CryptoHelper
 
 import com.example.p2pchat.objects.User
+import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
@@ -86,9 +87,13 @@ class MainActivity : AppCompatActivity() {
                         //intent.putExtra("userId", userId)
                         //intent.putExtra("username", usernameInput)
 
-                        val currentUser = User()
-                        currentUser.id = userId
-                        currentUser.username = usernameInput
+                        //currentUser.id = userId
+                        //currentUser.username = usernameInput
+                        //get public keys from shared preferences
+                        val sharedPrefHandler = SharedPreferencesHandler(this)
+                        val userPubKey = sharedPrefHandler.getPublicKey(userId)
+                        val currentUser = User(userId, usernameInput, userPubKey)
+
                         intent.putExtra("user", currentUser)
                         startActivity(intent)
                     }
@@ -100,6 +105,10 @@ class MainActivity : AppCompatActivity() {
             }
 
         }
+    }
+
+    fun retrievePublicKeys(user: User){
+
     }
 
     //ensures that pressing the "back" button will close the app instead of going to previous activities

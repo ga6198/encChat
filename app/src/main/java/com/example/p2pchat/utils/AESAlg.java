@@ -3,13 +3,21 @@ package com.example.p2pchat.utils;
 import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
+import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
+import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.UnrecoverableEntryException;
+import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 
 import javax.crypto.BadPaddingException;
@@ -23,25 +31,55 @@ import javax.crypto.spec.GCMParameterSpec;
 public class AESAlg implements CryptoAlg {
     private SecretKey key;
     private byte[] iv;
+    private String keyId;
 
-    public AESAlg() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        this.key = generateAESKey();
+    //used when creating the key for the first time
+    public AESAlg(String userId) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, CertificateException, KeyStoreException, IOException {
+        setKeyId(userId);
+
+        this.key = generateAESKey(keyId);
+
+        //For debugging the keystore
+        getAllAliasesInTheKeystore();
     }
 
-    public AESAlg(SecretKey key, byte[] iv){
-        this.key = key;
+    //used when you need to decrypt
+    public AESAlg(byte[] iv, String userId) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, UnrecoverableEntryException {
+        setKeyId(userId);
+
+        //get the keystore, which has the key
+        KeyStore keyStore = KeyStore.getInstance(Constants.KEYSTORE_ALIAS);
+        keyStore.load(null);
+        KeyStore.SecretKeyEntry secretKeyEntry = (KeyStore.SecretKeyEntry) keyStore.getEntry(keyId, null);
+        this.key = secretKeyEntry.getSecretKey();
+
         this.iv = iv;
+
+        //For debugging the keystore
+        getAllAliasesInTheKeystore();
+    }
+
+    private ArrayList<String> getAllAliasesInTheKeystore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+        KeyStore keyStore = KeyStore.getInstance(Constants.KEYSTORE_ALIAS);
+        keyStore.load(null);
+        ArrayList<String> aliases = Collections.list(keyStore.aliases());
+        for (String alias : aliases) {
+            Log.d("Alias", alias);
+        }
+
+
+        return aliases;
     }
 
     //create a key for encrypting private keys to the key store
     @RequiresApi(api = Build.VERSION_CODES.M)
-    public SecretKey generateAESKey() throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+    private SecretKey generateAESKey(String keyAlias) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 
         final KeyGenerator keyGenerator = KeyGenerator
-                .getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+                .getInstance(KeyProperties.KEY_ALGORITHM_AES, Constants.KEYSTORE_ALIAS);
 
         //set key parameters
-        final KeyGenParameterSpec keyGenParameterSpec = new KeyGenParameterSpec.Builder(Constants.KEYSTORE_ALIAS,
+        final KeyGenParameterSpec keyGenParameterSpec = new KeyGenParameterSpec.Builder(keyAlias,
                 KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM) //requires GCM mode to encrypt/decrypt
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
@@ -75,12 +113,37 @@ public class AESAlg implements CryptoAlg {
     }
 
     @Override
-    public byte[] decrypt(byte[] bytesToDecrypt) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+    public String decrypt(byte[] bytesToDecrypt) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
         final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         final GCMParameterSpec spec = new GCMParameterSpec(128, this.iv);
         cipher.init(Cipher.DECRYPT_MODE, this.key, spec);
-        final byte[] decryption = cipher.doFinal(bytesToDecrypt);
+        final byte[] decryptionBytes = cipher.doFinal(bytesToDecrypt);
+        String decryption = new String(decryptionBytes);
 
         return decryption;
+    }
+
+    public void setIv(byte[] iv) {
+        this.iv = iv;
+    }
+
+    public void setKey(SecretKey key) {
+        this.key = key;
+    }
+
+    public void setKeyId(String keyId) {
+        this.keyId = keyId;
+    }
+
+    public byte[] getIv() {
+        return iv;
+    }
+
+    public SecretKey getKey() {
+        return key;
+    }
+
+    public String getKeyId() {
+        return keyId;
     }
 }
