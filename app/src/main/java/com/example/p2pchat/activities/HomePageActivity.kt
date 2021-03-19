@@ -18,8 +18,11 @@ import com.example.p2pchat.objects.Chat
 import com.example.p2pchat.utils.CryptoHelper
 import com.example.p2pchat.utils.KeyType
 import com.example.p2pchat.objects.User
+import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Transaction
+import java.security.PrivateKey
+import java.security.PublicKey
 import java.util.*
 
 class HomePageActivity : AppCompatActivity() {
@@ -33,7 +36,8 @@ class HomePageActivity : AppCompatActivity() {
         //get current user data
         val extras = getIntent().extras
         currentUser = extras?.getParcelable<User>("user")
-
+        val sharedPrefsHandler = SharedPreferencesHandler(this)
+        currentUser?.privateKey = sharedPrefsHandler.getPrivateKey(currentUser?.id)
 
         //Bottom navigation menu
         val navigationBar = NavigationBar(this)
@@ -88,17 +92,44 @@ class HomePageActivity : AppCompatActivity() {
                     for (doc in chats!!){
                         val chatData = doc.getData()
 
+                        //get the secret key and decrypt the last message
+                        //maybe they need to write the public key with the last message
+                        //get the otherUserPublicKey
+                        val otherPublicKeyEncoded = chatData["otherUserPublicKey"] as String?
+                        if (otherPublicKeyEncoded != null){
+                            val otherPublicKey = CryptoHelper.decodeKey(otherPublicKeyEncoded, KeyType.PUBLIC)
+                            val secretKey = CryptoHelper.generateCommonSecretKey(
+                                currentUser!!.privateKey as PrivateKey?,
+                                otherPublicKey as PublicKey?
+                            )
 
-                        val chat = Chat(doc.id,
-                            chatData["lastUsername"] as String?,
-                            chatData["lastMessage"] as String?,
-                            chatData["lastMessageTime"] as Timestamp?,
-                            chatData["otherUserId"] as String?,
-                            chatData["otherUserUsername"] as String?)
+                            val encodedMessage = chatData["lastMessage"] as String?
+                            val decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, secretKey)
 
-                        if(!chatArrayAdapter.contains(chat)){
-                            //need to pass an onclick function
-                            chatArrayAdapter.add(chat)
+                            val chat = Chat(doc.id,
+                                chatData["lastUsername"] as String?,
+                                decryptedMessage,
+                                chatData["lastMessageTime"] as Timestamp?,
+                                chatData["otherUserId"] as String?,
+                                chatData["otherUserUsername"] as String?)
+
+                            if(!chatArrayAdapter.contains(chat)){
+                                //need to pass an onclick function
+                                chatArrayAdapter.add(chat)
+                            }
+                        }
+                        else{
+                            val chat = Chat(doc.id,
+                                chatData["lastUsername"] as String?,
+                                chatData["lastMessage"] as String?,
+                                chatData["lastMessageTime"] as Timestamp?,
+                                chatData["otherUserId"] as String?,
+                                chatData["otherUserUsername"] as String?)
+
+                            if(!chatArrayAdapter.contains(chat)){
+                                //need to pass an onclick function
+                                chatArrayAdapter.add(chat)
+                            }
                         }
                     }
                 }

@@ -24,6 +24,8 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
+import static java.sql.DriverManager.println;
+
 public class CryptoHelper {
 
 
@@ -139,6 +141,67 @@ public class CryptoHelper {
         }
 
         return null;
+    }
+
+    /**
+     * Symmetrically encrypt a text message
+     * @param message - The text message to encrypt
+     * @param secretKey - Symmetric key for encryption
+     * @return String - The encrypted message after base64 encoding
+     */
+    static public String encryptMessage(String message, byte[] secretKey){
+        //perform the encryption
+        SecretKeyAlg secretKeyAlg = new SecretKeyAlg(secretKey);
+        byte[] encryptedMessageBytes = new byte[0];
+        try {
+            encryptedMessageBytes = secretKeyAlg.encrypt(message).get("ciphertext");
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+        String encryptedMessage = Base64.encodeToString(encryptedMessageBytes, Base64.DEFAULT);
+
+        System.out.println("Encrypted Message: ${encryptedMessage}");
+
+        return encryptedMessage;
+    }
+
+    /**
+     * Symmetrically decrypt a base64 encoded text message
+     * @param encodedMessage - The text message to decrypt. It must be base64 decoded first
+     * @param secretKey - Symmetric key for encryption/decryption
+     * @return String - The decrypted plaintext
+     */
+    static public String decryptMessage(String encodedMessage, byte[] secretKey){
+        //base 64 decode the message
+        byte[] message = Base64.decode(encodedMessage, Base64.DEFAULT);
+
+        SecretKeyAlg secretKeyAlg = new SecretKeyAlg(secretKey);
+        String plaintext = null;
+        try {
+            plaintext = secretKeyAlg.decrypt(message);
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidAlgorithmParameterException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+
+        return plaintext;
     }
 
     /**

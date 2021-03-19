@@ -100,7 +100,7 @@ class ChatActivity : AppCompatActivity() {
                 //decrypt message
                 var decryptedMessage = ""
                 if(messageData["message"] != null) {
-                    decryptedMessage = decryptMessage(messageData["message"] as String)
+                    decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, secretKey)
                 }
 
                 val message = ChatMessage(
@@ -147,7 +147,7 @@ class ChatActivity : AppCompatActivity() {
     private fun sendMessage(message: String, currentUser: User, otherUser: User, chat: Chat){
         //encrypt the message
         //val encryptedMessage = encryptMessage(message, currentUser, otherUser)
-        val encryptedMessage = encryptMessage(message)
+        val encryptedMessage = CryptoHelper.encryptMessage(message, secretKey)
 
         //data, like time, author
         val currentTime = Timestamp.now()
@@ -167,7 +167,8 @@ class ChatActivity : AppCompatActivity() {
             "lastUsername" to currentUser.username,
             "currentUserId" to currentUser.id,
             "otherUserId" to otherUser.id,
-            "otherUserUsername" to otherUser.username
+            "otherUserUsername" to otherUser.username,
+            "otherUserPublicKey" to otherUser.encodedPublicKey
         )
 
         val otherUserLastMessageData = hashMapOf<String, Any>(
@@ -177,7 +178,8 @@ class ChatActivity : AppCompatActivity() {
             "lastUsername" to currentUser.username,
             "currentUserId" to otherUser.id,
             "otherUserId" to currentUser.id,
-            "otherUserUsername" to currentUser.username
+            "otherUserUsername" to currentUser.username,
+            "otherUserPublicKey" to currentUser.encodedPublicKey
         )
 
         //generate a new document reference for a message, with a new id
@@ -200,6 +202,7 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    /*
     private fun encryptMessage(message: String): String{
         //perform the encryption
         val secretKeyAlg = SecretKeyAlg(secretKey)
@@ -211,6 +214,8 @@ class ChatActivity : AppCompatActivity() {
         return encryptedMessage;
     }
 
+     */
+
     /*
     private fun encryptMessage(message: String, currentUser: User, otherUser: User): String{
         //get the receiver's public key
@@ -250,6 +255,7 @@ class ChatActivity : AppCompatActivity() {
     }
      */
 
+    /*
     private fun decryptMessage(encodedMessage: String): String{
         //base 64 decode the message
          val message = Base64.getDecoder().decode(encodedMessage)
@@ -259,6 +265,8 @@ class ChatActivity : AppCompatActivity() {
 
         return plaintext
     }
+
+     */
 
     //old function, used with double encryption scheme
 /*
