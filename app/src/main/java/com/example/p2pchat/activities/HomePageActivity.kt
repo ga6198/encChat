@@ -18,12 +18,11 @@ import com.example.p2pchat.objects.Chat
 import com.example.p2pchat.utils.CryptoHelper
 import com.example.p2pchat.utils.KeyType
 import com.example.p2pchat.objects.User
+import com.example.p2pchat.utils.Constants
 import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.Transaction
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.util.*
 
 class HomePageActivity : AppCompatActivity() {
 
@@ -67,7 +66,11 @@ class HomePageActivity : AppCompatActivity() {
                     }
                     otherUser.username = otherUserData?.get("username") as String?
                     val publicKeyString = otherUserData?.get("publicKey") as String?
-                    otherUser.publicKey = CryptoHelper.decodeKey(publicKeyString, KeyType.PUBLIC)
+                    otherUser.publicKey = CryptoHelper.decodeKey(
+                        publicKeyString,
+                        KeyType.PUBLIC,
+                        Constants.identityKeyAlg
+                    )
 
                     //open the chat
                     currentUser?.let { openChat(it, otherUser, clickedChat.id) }
@@ -97,18 +100,24 @@ class HomePageActivity : AppCompatActivity() {
                         //get the otherUserPublicKey
                         val otherPublicKeyEncoded = chatData["otherUserPublicKey"] as String?
                         if (otherPublicKeyEncoded != null){
-                            val otherPublicKey = CryptoHelper.decodeKey(otherPublicKeyEncoded, KeyType.PUBLIC)
+                            val otherPublicKey = CryptoHelper.decodeKey(
+                                otherPublicKeyEncoded,
+                                KeyType.PUBLIC,
+                                Constants.identityKeyAlg
+                            )
                             val secretKey = CryptoHelper.generateCommonSecretKey(
                                 currentUser!!.privateKey as PrivateKey?,
                                 otherPublicKey as PublicKey?
                             )
 
+                            //TODO: Fix the home page activity, so the decrypted message is shown
+
                             val encodedMessage = chatData["lastMessage"] as String?
-                            val decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, secretKey)
+                            //val decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, secretKey)
 
                             val chat = Chat(doc.id,
                                 chatData["lastUsername"] as String?,
-                                decryptedMessage,
+                                encodedMessage, //decryptedMessage,
                                 chatData["lastMessageTime"] as Timestamp?,
                                 chatData["otherUserId"] as String?,
                                 chatData["otherUserUsername"] as String?)
@@ -203,7 +212,11 @@ class HomePageActivity : AppCompatActivity() {
                         val userData = document.data
 
                         val userPublicKeyEncoded = userData.get("publicKey").toString()
-                        val userPublicKey = CryptoHelper.decodeKey(userPublicKeyEncoded, KeyType.PUBLIC)
+                        val userPublicKey = CryptoHelper.decodeKey(
+                            userPublicKeyEncoded,
+                            KeyType.PUBLIC,
+                            Constants.identityKeyAlg
+                        )
 
                         val user = User()
                         user.id = document.id
@@ -241,23 +254,11 @@ class HomePageActivity : AppCompatActivity() {
         builder.setTitle("Confirm User")
         builder.setNegativeButton("Cancel"){dialog, which->
             //automatically closes dialog
-
         }
 
         builder.setPositiveButton("Confirm") { dialog, which ->
             //initiate chat
-            // follow the process on your proposal (start by getting the other user's keys
-
-            //get current user data
-            val extras = getIntent().extras
-            /*
-            val currentUsername = extras?.getString("username")
-            val currentId = extras?.getString("userId")
-            val currentUser = User()
-            currentUser.id = currentId
-            currentUser.username = currentUsername
-
-             */
+            // follow the process on your proposal (start by getting the other user's keys)
 
             //for now, just directly opening a chat
             currentUser?.let { createChat(it, user) }
@@ -309,6 +310,25 @@ class HomePageActivity : AppCompatActivity() {
                             val currentUserRef = usersRef.document(currentUser.id).collection("usersChats").document(newChatId)
                             val otherUserRef = usersRef.document(otherUser.id).collection("usersChats").document(newChatId)
 
+                            //new session key data
+                            //generate a session key and upload it with the chat? needs timestamp. When reading, check sharedPreferences. If not there, save the key
+                            //The sharedpreferences id should be the chatid, with the timestamp
+                            val sessionKey = CryptoHelper.generateSessionKey()
+                            val encryptedSessionKey = CryptoHelper.encryptSessionKey(sessionKey, otherUser.publicKey as PublicKey) //CryptoHelper.generateEncryptedSessionKey(otherUser.publicKey as PublicKey)
+
+                            //need to add "currentSessionKey" to chat data and create a new collection with sessions keys and their upload times.
+                            // Can only retrieve from sharedpreferences with an exact upload time
+                            //need to write "keyUploader" as well
+                            val sessionKeyRef = newChatRef.collection("sessionKeys").document() //auto-generated id
+                            val sessionKeyData = hashMapOf(
+                                "sessionKey" to encryptedSessionKey,
+                                "uploader" to currentUser.id,
+                                "decrypter" to otherUser.id, //the person who will use his private key to decrypt the session key
+                                "timeCreated" to timeCreated
+                            )
+
+                            //TODO: add a first message?
+
                             db.runTransaction{transaction ->
                                 //add to the chats collection
                                 transaction.set(newChatRef, chatData)
@@ -316,6 +336,13 @@ class HomePageActivity : AppCompatActivity() {
                                 //save the chat data for users
                                 transaction.set(currentUserRef, chatUploadData)
                                 transaction.set(otherUserRef, chatUploadData)
+
+                                //save the session key data
+                                transaction.set(sessionKeyRef, sessionKeyData)
+
+                                //save the session key to sharedPreferences
+                                val sharedPrefHandler = SharedPreferencesHandler(this)
+                                sharedPrefHandler.saveSessionKey(newChatId, timeCreated, sessionKey)
                             }
                                 .addOnCompleteListener{
                                     if(task.isSuccessful()){

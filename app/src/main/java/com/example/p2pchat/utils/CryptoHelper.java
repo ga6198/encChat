@@ -1,30 +1,20 @@
 package com.example.p2pchat.utils;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.os.Build;
-import android.security.keystore.KeyGenParameterSpec;
-import android.security.keystore.KeyProperties;
-
-import androidx.annotation.RequiresApi;
-
 //import com.example.p2pchat.R;
-import android.content.res.Resources;
 import android.util.Base64;
 
-import com.example.p2pchat.R;
+import com.example.p2pchat.objects.SessionKey;
 
-import java.net.*;
-import java.io.*;
 import javax.crypto.*;
-import javax.crypto.spec.*;
+
 import java.security.*;
 import java.lang.Exception;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.List;
 
-import static java.sql.DriverManager.println;
+import com.google.firebase.Timestamp;
 
 public class CryptoHelper {
 
@@ -51,12 +41,13 @@ public class CryptoHelper {
      * Base64 decodes an encoded key string
      * @param keyStr - Base64 encoded key string
      * @param keyType - PUBLIC or PRIVATE
+     * @param alg
      * @return Key - The public or private key
      */
-    static public Key decodeKey(String keyStr, KeyType keyType) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    static public Key decodeKey(String keyStr, KeyType keyType, String alg) throws NoSuchAlgorithmException, InvalidKeySpecException {
         try {
             byte[] sigBytes = Base64.decode(keyStr, Base64.DEFAULT);
-            KeyFactory keyFact = KeyFactory.getInstance("DH"); //KeyFactory keyFact = KeyFactory.getInstance("RSA");
+            KeyFactory keyFact = KeyFactory.getInstance(alg); //KeyFactory keyFact = KeyFactory.getInstance("RSA");
 
             Key key = null;
             //creates a public key
@@ -78,9 +69,9 @@ public class CryptoHelper {
     }
 
     //Generates public/private key pair
-    static public KeyPair generateKeyPair() throws NoSuchAlgorithmException {
+    static public KeyPair generateKeyPair(String alg) throws NoSuchAlgorithmException {
         //KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("DH");
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance(alg); //"DH"
         kpg.initialize(2048);
         KeyPair kp = kpg.generateKeyPair();
 
@@ -140,6 +131,67 @@ public class CryptoHelper {
             e.printStackTrace();
         }
 
+        return null;
+    }
+
+    /**
+     * Generates a random symmetric key
+     * @return byte[] - The symmetric key.
+     */
+    static public byte[] generateSessionKey() throws NoSuchAlgorithmException {
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(256); // for example
+        SecretKey secretKey = keyGen.generateKey();
+        byte[] keyBytes = secretKey.getEncoded();
+        return keyBytes;
+    }
+
+    /**
+     * Encrypts a session key with the receiver's public key
+     * @param sessionKey - The session key to encrypt
+     * @param receiverPublicKey - The message receiver's public key
+     * @return String - The encrypted symmetric key, base64 encoded to a String
+     */
+    static public String encryptSessionKey(byte[] sessionKey, PublicKey receiverPublicKey) throws NoSuchAlgorithmException, IllegalBlockSizeException, InvalidKeyException, BadPaddingException, NoSuchPaddingException {
+        //base64 encode the key for encryption
+        String base64EncodedKey = Base64.encodeToString(sessionKey, Base64.DEFAULT);
+
+        RSAAlg rsaAlg = new RSAAlg(receiverPublicKey, RSAAlg.RSAMode.CONFIDENTIALITY_MODE);
+        byte[] encryptedKey = rsaAlg.encrypt(base64EncodedKey).get("ciphertext");
+
+        //base64 encode the key so it can be saved to the database
+        String encodedEncryptedKey = Base64.encodeToString(encryptedKey, Base64.DEFAULT);
+        return encodedEncryptedKey;
+    }
+
+    /**
+     * Decrypts a session key with the receiver's private key
+     * @param encryptedSessionKey - The session key to decrypt
+     * @param receiverPrivateKey - The message receiver's private key
+     * @return byte[] - The symmetric decrypted, in a usable form
+     */
+    static public byte[] decryptSessionKey(String encryptedSessionKey, PrivateKey receiverPrivateKey) throws NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
+        byte[] decodedEncryptedSessionKey = Base64.decode(encryptedSessionKey, Base64.DEFAULT);
+
+        //decrypt the session key
+        RSAAlg rsaAlg = new RSAAlg(receiverPrivateKey, RSAAlg.RSAMode.CONFIDENTIALITY_MODE);
+        String encodedSessionKey = rsaAlg.decrypt(decodedEncryptedSessionKey);
+
+        //decode back to byte form to get a usable session key
+        byte[] sessionKey = Base64.decode(encodedSessionKey, Base64.DEFAULT);
+        return sessionKey;
+    }
+
+    static public SessionKey selectSessionKey(List<SessionKey> sessionKeyList, Timestamp messageTime){
+        // Start from highest and iterate down.
+        for (int i = sessionKeyList.size() - 1; i >= 0; i--){
+            SessionKey currentSessionKey = sessionKeyList.get(i);
+
+            //If message timestamp higher than the key timestamp, use it
+            if(messageTime.getSeconds() >= currentSessionKey.getTimeCreated().getSeconds()){
+                return currentSessionKey;
+            }
+        }
         return null;
     }
 

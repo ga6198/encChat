@@ -14,10 +14,16 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 public class RSAAlg implements CryptoAlg {
+    public enum RSAMode{
+        CONFIDENTIALITY_MODE, //encrypt with other person's public key
+        AUTHENTICATION_MODE //encrypt with your own private key
+    }
+
     private PublicKey publicKey;
     private PrivateKey privateKey;
+    private RSAMode mode;
 
-    private final String ENCRYPTION_ALG = "RSA/ECB/OAEPWithSHA-1AndMGF1Padding";
+    private final String ENCRYPTION_ALG = "RSA/ECB/PKCS1Padding";
 
     /**
      * set up RSA encryption/decryption using a public and private key. They are NOT a key pair
@@ -31,12 +37,14 @@ public class RSAAlg implements CryptoAlg {
     }
      */
 
-    public RSAAlg(PublicKey publicKey){
+    public RSAAlg(PublicKey publicKey, RSAMode mode){
         setPublicKey(publicKey);
+        setMode(mode);
     }
 
-    public RSAAlg(PrivateKey privateKey){
+    public RSAAlg(PrivateKey privateKey, RSAMode mode){
         setPrivateKey(privateKey);
+        setMode(mode);
     }
 
     /**
@@ -73,9 +81,45 @@ public class RSAAlg implements CryptoAlg {
         //set up cipher
         final Cipher cipher = Cipher.getInstance(ENCRYPTION_ALG);
 
-        //encrypt with receiver public key
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-        byte[] ciphertextFinal = cipher.doFinal(textToEncrypt.getBytes());
+        byte[] ciphertextFinal = null;
+        if(mode.equals(RSAMode.CONFIDENTIALITY_MODE)){
+            //encrypt with receiver public key
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+            ciphertextFinal = cipher.doFinal(textToEncrypt.getBytes());
+        }
+        else if(mode.equals(RSAMode.AUTHENTICATION_MODE)){
+            //encrypt with sender private key
+            cipher.init(Cipher.ENCRYPT_MODE, privateKey);
+            ciphertextFinal = cipher.doFinal(textToEncrypt.getBytes());
+        }
+
+        //build hashmap
+        HashMap<String, byte[]> ciphertext = new HashMap<String, byte[]>();
+        ciphertext.put("ciphertext", ciphertextFinal);
+        return ciphertext;
+    }
+
+    /**
+     * encrypts a string w/ RSA encryption
+     * @param textToEncrypt - the text to encrypt
+     * @param mode - represents that mode/key you are encrypting with
+     * @return HashMap<String, byte[]> - The string is a key, like "ciphertext" or "iv" if needed. The byte[] is the ciphertext data, and other data
+     */
+    public HashMap<String, byte[]> encrypt(String textToEncrypt, RSAMode mode) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        //set up cipher
+        final Cipher cipher = Cipher.getInstance(ENCRYPTION_ALG);
+
+        byte[] ciphertextFinal = null;
+        if(mode.equals(RSAMode.CONFIDENTIALITY_MODE)){
+            //encrypt with receiver public key
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+            ciphertextFinal = cipher.doFinal(textToEncrypt.getBytes());
+        }
+        else if(mode.equals(RSAMode.AUTHENTICATION_MODE)){
+            //encrypt with sender private key
+            cipher.init(Cipher.ENCRYPT_MODE, privateKey);
+            ciphertextFinal = cipher.doFinal(textToEncrypt.getBytes());
+        }
 
         //build hashmap
         HashMap<String, byte[]> ciphertext = new HashMap<String, byte[]>();
@@ -110,9 +154,47 @@ public class RSAAlg implements CryptoAlg {
         //set up cipher
         final Cipher cipher = Cipher.getInstance(ENCRYPTION_ALG);
 
-        //receiver private key
-        cipher.init(Cipher.DECRYPT_MODE, privateKey);
-        byte[] plaintextFinal = cipher.doFinal(bytesToDecrypt);
+        byte[] plaintextFinal = null;
+
+        if(mode.equals(RSAMode.CONFIDENTIALITY_MODE)){
+            //receiver private key
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            plaintextFinal = cipher.doFinal(bytesToDecrypt);
+        }
+        else if (mode.equals(RSAMode.AUTHENTICATION_MODE)){
+            //sender public key
+            cipher.init(Cipher.DECRYPT_MODE, publicKey);
+            plaintextFinal = cipher.doFinal(bytesToDecrypt);
+        }
+
+        //convert to string
+        String plaintext = new String(plaintextFinal);
+
+        return plaintext;
+    }
+
+    /**
+     * decrypts a string w/ RSA encryption
+     * @param bytesToDecrypt - the bytes to decrypt to a String
+     * @param mode - represents that mode/key you are decrypting with
+     * @return String - plaintext
+     */
+    public String decrypt(byte[] bytesToDecrypt, RSAMode mode) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        //set up cipher
+        final Cipher cipher = Cipher.getInstance(ENCRYPTION_ALG);
+
+        byte[] plaintextFinal = null;
+
+        if(mode.equals(RSAMode.CONFIDENTIALITY_MODE)){
+            //receiver private key
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            plaintextFinal = cipher.doFinal(bytesToDecrypt);
+        }
+        else if (mode.equals(RSAMode.AUTHENTICATION_MODE)){
+            //sender public key
+            cipher.init(Cipher.DECRYPT_MODE, publicKey);
+            plaintextFinal = cipher.doFinal(bytesToDecrypt);
+        }
 
         //convert to string
         String plaintext = new String(plaintextFinal);
@@ -134,5 +216,13 @@ public class RSAAlg implements CryptoAlg {
 
     public void setPublicKey(PublicKey publicKey) {
         this.publicKey = publicKey;
+    }
+
+    public RSAMode getMode() {
+        return mode;
+    }
+
+    public void setMode(RSAMode mode) {
+        this.mode = mode;
     }
 }

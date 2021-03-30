@@ -1,19 +1,25 @@
 package com.example.p2pchat.objects;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Base64;
 
-import com.example.p2pchat.MainActivity;
+import com.example.p2pchat.utils.Constants;
 import com.example.p2pchat.utils.CryptoHelper;
 import com.example.p2pchat.utils.KeyType;
+import com.example.p2pchat.utils.RSAAlg;
+import com.example.p2pchat.utils.SharedPreferencesHandler;
 
+import java.io.IOException;
 import java.security.*;
-import java.security.cert.X509Certificate;
+import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.HashMap;
 
-import static android.content.Context.MODE_PRIVATE;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 public class User implements Parcelable {
     private String id;
@@ -21,6 +27,8 @@ public class User implements Parcelable {
     private String password;
     private Key publicKey;
     private Key privateKey;
+    private Key signedPrekeyPublic;
+    private Key signedPrekeyPrivate;
 
     public User(){
         this.username = "";
@@ -32,17 +40,22 @@ public class User implements Parcelable {
         this.username = username;
 
         //generate the user keys
-        KeyPair keys = CryptoHelper.generateKeyPair();
+        KeyPair keys = CryptoHelper.generateKeyPair(Constants.identityKeyAlg);
         this.publicKey = keys.getPublic();
         this.privateKey = keys.getPrivate();
 
+        //generate the signed prekeys (prekeys that WILL be signed
+        KeyPair signedPrekeys = CryptoHelper.generateKeyPair(Constants.signedPrekeyAlg);
+        this.signedPrekeyPublic = signedPrekeys.getPublic();
+        this.signedPrekeyPrivate = signedPrekeys.getPrivate();
     }
 
     //main constructor used for creating this object class
-    public User(String id, String username, Key publicKey){
+    public User(String id, String username, Key publicKey, Key signedPrekeyPublic){
         setId(id);
         setUsername(username);
         setPublicKey(publicKey);
+        setSignedPrekeyPublic(signedPrekeyPublic);
     }
 
     // 99.9% of the time you can just ignore this
@@ -59,6 +72,8 @@ public class User implements Parcelable {
         out.writeString(this.password);
         out.writeString(CryptoHelper.encodeKey(this.publicKey));
         out.writeString(CryptoHelper.encodeKey(this.privateKey));
+        out.writeString(CryptoHelper.encodeKey(this.signedPrekeyPublic));
+        out.writeString(CryptoHelper.encodeKey(this.signedPrekeyPrivate));
     }
 
     // this is used to regenerate your object. All Parcelables must have a CREATOR that implements these two methods
@@ -81,14 +96,31 @@ public class User implements Parcelable {
 
         //setting the keys requires exception checks
         try {
-            setPublicKey(CryptoHelper.decodeKey(in.readString(), KeyType.PUBLIC));
+            setPublicKey(CryptoHelper.decodeKey(in.readString(), KeyType.PUBLIC, Constants.identityKeyAlg));
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (InvalidKeySpecException e) {
             e.printStackTrace();
         }
         try {
-            setPrivateKey(CryptoHelper.decodeKey(in.readString(), KeyType.PRIVATE));
+            setPrivateKey(CryptoHelper.decodeKey(in.readString(), KeyType.PRIVATE, Constants.identityKeyAlg));
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        }
+
+        //setting the up signed prekeys requires exception checks as well
+        try {
+            setSignedPrekeyPublic(CryptoHelper.decodeKey(in.readString(), KeyType.PUBLIC, Constants.signedPrekeyAlg));
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            setSignedPrekeyPrivate(CryptoHelper.decodeKey(in.readString(), KeyType.PRIVATE, Constants.signedPrekeyAlg));
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (InvalidKeySpecException e) {
@@ -102,6 +134,71 @@ public class User implements Parcelable {
 
     public String getEncodedPrivateKey(){
         return CryptoHelper.encodeKey(privateKey);
+    }
+
+    public String getEncodedSignedPrekeyPublic(){
+        return CryptoHelper.encodeKey(this.signedPrekeyPublic);
+    }
+
+    public String getEncodedSignedPrekeyPrivate(){
+        return CryptoHelper.encodeKey(this.signedPrekeyPrivate);
+    }
+
+    /**
+     * A signature that helps prove the user is legitimately the user
+     * Is the public signed prekey, signed by the user's identity private key
+     * @param context - current activity context, needed to access sharedPreferences
+     * @return String - base64 encoded signature
+     */
+    public String getSignature(Context context){
+        // get the identity private key from shared preferences
+        SharedPreferencesHandler sharedPrefsHandler = new SharedPreferencesHandler(context);
+        try {
+            Key identityPrvKey = sharedPrefsHandler.getPrivateKey(this.getId());
+
+            //need to encode the public signed prekey before encrypting
+            String encodedSignedPrekeyPublic = getEncodedSignedPrekeyPublic();
+
+            //!!!!!!Can't encrypt w/ the identityPrvKey because it is a DH key!!!!!
+            //generate the common shared key and encrypt
+            //x: instead of uploading the signature at registration, create the signature
+            //get bytes from the private key, shorten, and use the secretkeyalg
+
+            //sign the public signed prekey by encrypting it w/ the identity private key
+            RSAAlg rsaAlg = new RSAAlg((PrivateKey)identityPrvKey, RSAAlg.RSAMode.AUTHENTICATION_MODE);
+            HashMap<String, byte[]> encryptedPrekey = rsaAlg.encrypt(encodedSignedPrekeyPublic);
+
+            byte[] prekeySignature = encryptedPrekey.get("ciphertext");
+
+            //base64 encode the signature, so it can be used as a string
+            String encodedPrekeySignature = Base64.encodeToString(prekeySignature, Base64.DEFAULT);
+
+            return encodedPrekeySignature;
+
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        } catch (UnrecoverableEntryException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (InvalidAlgorithmParameterException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public String getId() {
@@ -142,5 +239,21 @@ public class User implements Parcelable {
 
     public void setPublicKey(Key publicKey) {
         this.publicKey = publicKey;
+    }
+
+    public Key getSignedPrekeyPrivate() {
+        return signedPrekeyPrivate;
+    }
+
+    public void setSignedPrekeyPrivate(Key signedPrekeyPrivate) {
+        this.signedPrekeyPrivate = signedPrekeyPrivate;
+    }
+
+    public Key getSignedPrekeyPublic() {
+        return signedPrekeyPublic;
+    }
+
+    public void setSignedPrekeyPublic(Key signedPrekeyPublic) {
+        this.signedPrekeyPublic = signedPrekeyPublic;
     }
 }

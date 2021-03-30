@@ -92,7 +92,8 @@ class MainActivity : AppCompatActivity() {
                         //get public keys from shared preferences
                         val sharedPrefHandler = SharedPreferencesHandler(this)
                         val userPubKey = sharedPrefHandler.getPublicKey(userId)
-                        val currentUser = User(userId, usernameInput, userPubKey)
+                        val signedPrekeyPublic = sharedPrefHandler.getSignedPrekeyPublic(userId)
+                        val currentUser = User(userId, usernameInput, userPubKey, signedPrekeyPublic)
 
                         intent.putExtra("user", currentUser)
                         startActivity(intent)

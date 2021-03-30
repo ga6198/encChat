@@ -14,15 +14,18 @@ import java.util.*
 import android.database.DataSetObserver
 import android.widget.AbsListView
 import com.example.p2pchat.adapters.ChatMessageArrayAdapter
+import com.example.p2pchat.objects.SessionKey
 import com.example.p2pchat.utils.CryptoHelper
 import com.example.p2pchat.utils.RSAAlg
 import com.example.p2pchat.utils.SecretKeyAlg
 import com.example.p2pchat.utils.SharedPreferencesHandler
+import com.google.firebase.firestore.Query
 import kotlinx.android.synthetic.main.chat_preview.*
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
+import kotlin.collections.HashMap
 
 
 class ChatActivity : AppCompatActivity() {
@@ -31,6 +34,7 @@ class ChatActivity : AppCompatActivity() {
     var otherUser: User? = null
     var chatId: String? = null
     var secretKey: ByteArray? = null //holds the secret key the two users will use
+    var sessionKeys: MutableList<SessionKey> = mutableListOf<SessionKey>() //holds all of the secret keys for this chat
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +62,31 @@ class ChatActivity : AppCompatActivity() {
 
         /*
         chat adapter
+        settings for how the chat messages are displayed
         */
+        val chatArrayAdapter = setUpChatAdapter()
+
+
+        //TODO: Sometimes, the chats load before the keys are retrieved, causing the program to crash
+
+        //set up key listener
+        if(currentUser != null) {
+            setUpKeyListener(currentUser!!, chat);
+        }
+
+        //set up chat message listener
+        setUpChatListener(chat, chatArrayAdapter)
+
+        //onclicks
+        if(currentUser != null && otherUser != null){
+            onClick(currentUser!!, otherUser!!, chat)
+        }
+        else{
+            Log.d("ChatActivity.kt", "currentUser or otherUser seem to be null")
+        }
+    }
+
+    private fun setUpChatAdapter(): ChatMessageArrayAdapter{
         val chatArrayAdapter = ChatMessageArrayAdapter(
             applicationContext,
             R.layout.my_message
@@ -74,15 +102,71 @@ class ChatActivity : AppCompatActivity() {
                 listView.setSelection(chatArrayAdapter.count - 1)
             }
         })
+        return chatArrayAdapter
+    }
 
+    //loads all existing secret keys and listens for new secret keys
+    private fun setUpKeyListener(currentUser:User, chat: Chat){
+        val db = FirebaseFirestore.getInstance()
+        val keysRef = db.collection("chats").document(chat.id).collection("sessionKeys")
+
+        keysRef.orderBy("timeCreated", Query.Direction.ASCENDING).addSnapshotListener{value, error ->
+            if (error != null) {
+                Log.w("ChatActivity.kt", "Listen for keys failed.", error)
+                return@addSnapshotListener
+            }
+
+            //get the timestamps, and load the corresponding keys from SharedPreferences. Add them to the secretKeys HashMap
+            //if the key does not exist, that means it is new and must be decrypted and saved to SharedPreferences
+            //TODO: This may add values to the list multiple times. Make it so only keys not in the list are added
+            //TODO: refactor so that this data is all retrieved when the page is loaded. On complete, set up the message listener. If a new key is added, reload the page
+            for (doc in value!!){
+                val keyData = doc.getData()
+
+                val timeCreated = keyData["timeCreated"] as Timestamp?
+                if(timeCreated != null){
+                    //get the key from sharedPreferences
+                    val sharedPrefsHandler = SharedPreferencesHandler(this)
+                    val currentSessionKey = sharedPrefsHandler.getSessionKey(chat.id, timeCreated)
+                    //if the session key is nonexistent, that means the key should be
+                    if(currentSessionKey == null){ //if(currentSessionKey.equals(byteArrayOf(0x00))){
+                        //need to decrypt the key from the server
+                        val encryptedSessionKey = keyData["sessionKey"] as String?
+
+                        //need to get the private key from sharedPreferences to decrypt
+                        val privateKey = sharedPrefsHandler.getPrivateKey(currentUser.id)
+
+                        //decrypt the session key
+                        val sessionKeyBytes = CryptoHelper.decryptSessionKey(encryptedSessionKey, privateKey as PrivateKey)
+
+                        //add the key to the sessionKeys list
+                        val sessionKey = SessionKey(chat.id, sessionKeyBytes, timeCreated)
+                        if(!sessionKeys.contains(sessionKey)) {
+                            sessionKeys.add(sessionKey)
+                        }
+
+                        //save the key to sharedPreferences
+                        sharedPrefsHandler.saveSessionKey(chat.id, timeCreated, sessionKeyBytes)
+                    }
+                    else{
+                        val sessionKey = SessionKey(chat.id, currentSessionKey, timeCreated)
+                        if(!sessionKeys.contains(sessionKey)) {
+                            sessionKeys.add(sessionKey)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //listen for the chat messages
+    private fun setUpChatListener(chat: Chat, chatArrayAdapter: ChatMessageArrayAdapter){
         val db = FirebaseFirestore.getInstance()
         val messagesRef = db.collection("chats")
             .document(chat.id)
             .collection("messages")
 
-        //load messages/set adapter for NEW messages
-        //This adapter only needs to update for each SINGLE NEW message
-
+        //load messages/set adapter for chat messages
         messagesRef.orderBy("time").addSnapshotListener{ value, error ->
             if (error != null) {
                 Log.w("ChatActivity.kt", "Listen failed.", error)
@@ -97,16 +181,25 @@ class ChatActivity : AppCompatActivity() {
                     ownMessage = true
                 }
 
+                val messageTime = messageData["time"] as Timestamp?
+                //select the correct session key by looking at the timestamp
+                val currentSessionKey = CryptoHelper.selectSessionKey(sessionKeys, messageTime)
+
                 //decrypt message
                 var decryptedMessage = ""
-                if(messageData["message"] != null) {
-                    decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, secretKey)
+                //if the key is valid, decrypt the message
+                if(messageData["message"] != null && currentSessionKey.sessionKey != null) {
+                    decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, currentSessionKey.sessionKey); //decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, secretKey)
+                }
+                //if the key is not valid, just display the encrypted message
+                else if(messageData["message"] != null){
+                    decryptedMessage = messageData["message"] as String
                 }
 
                 val message = ChatMessage(
                     messageData["senderId"] as String?,
                     decryptedMessage, //messageData["message"] as String?,
-                    messageData["time"] as Timestamp?,
+                    messageTime,
                     ownMessage
                 )
 
@@ -116,15 +209,8 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
         }
-
-        //onclicks
-        if(currentUser != null && otherUser != null){
-            onClick(currentUser!!, otherUser!!, chat)
-        }
-        else{
-            Log.d("ChatActivity.kt", "currentUser or otherUser seem to be null")
-        }
     }
+
 
     private fun onClick(currentUser: User, otherUser: User, chat: Chat){
         //send button
@@ -143,11 +229,15 @@ class ChatActivity : AppCompatActivity() {
             }
         }
     }
-    
+
+    //TODO: refactor this to pass in the current secret key. The latest key should be the last one in the list
     private fun sendMessage(message: String, currentUser: User, otherUser: User, chat: Chat){
         //encrypt the message
         //val encryptedMessage = encryptMessage(message, currentUser, otherUser)
-        val encryptedMessage = CryptoHelper.encryptMessage(message, secretKey)
+
+        //get the last key
+        val currentSessionKey = sessionKeys.last()
+        val encryptedMessage = CryptoHelper.encryptMessage(message, currentSessionKey.sessionKey) //val encryptedMessage = CryptoHelper.encryptMessage(message, secretKey)
 
         //data, like time, author
         val currentTime = Timestamp.now()
@@ -207,7 +297,7 @@ class ChatActivity : AppCompatActivity() {
         //perform the encryption
         val secretKeyAlg = SecretKeyAlg(secretKey)
         val encryptedMessageBytes = secretKeyAlg.encrypt(message).get("ciphertext")!!;
-        val encryptedMessage = Base64.getEncoder().encodeToString(encryptedMessageBytes) //TODO: might need to base64 encode
+        val encryptedMessage = Base64.getEncoder().encodeToString(encryptedMessageBytes)
 
         println("Encrypted Message: ${encryptedMessage}")
 

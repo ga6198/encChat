@@ -109,13 +109,16 @@ class RegistrationActivity : AppCompatActivity() {
 
         val user = hashMapOf<String, Any>(
             "username" to newUser.username,
-            "publicKey" to CryptoHelper.encodeKey(newUser.publicKey)
+            "publicKey" to newUser.encodedPublicKey,
+            "signedPrekeyPublic" to newUser.encodedSignedPrekeyPublic //,
+            //"signature" to newUser.getSignature(this) //signature cannot be added before the saveUser function is called and saves the user to SharedPrefs
         )
 
         println(user["publicKey"])
 
         //used "set" to create document with specific id
-        db.collection("users").document(userId).set(user)
+        val userRef = db.collection("users").document(userId)
+        userRef.set(user)
             .addOnCompleteListener{ task ->
                 if (task.isSuccessful) {
                     Toast.makeText(this, "Registered successfully", Toast.LENGTH_LONG).show()
@@ -132,6 +135,12 @@ class RegistrationActivity : AppCompatActivity() {
                     try {
                         val sharedPrefHandler = SharedPreferencesHandler(this)
                         sharedPrefHandler.saveUser(newUser)
+
+                        /*
+                        //once the user is saved to sharedPreferences, upload the user's signature
+                        val signature = newUser.getSignature(this)
+                        userRef.update("signature", signature)
+                         */
 
                         //Redirect inside the app and save user data
                         val intent = Intent(this, HomePageActivity::class.java)

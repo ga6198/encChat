@@ -24,7 +24,7 @@ public class NavigationBar {
 
         setBottomNavigationView((BottomNavigationView) this.activity.findViewById(R.id.bottomNavigationView));
 
-        //TODO: write the intent switch code. Will need to pass in user info
+        //intent switch code
         bottomNavigationView.setOnNavigationItemSelectedListener(
                 new BottomNavigationView.OnNavigationItemSelectedListener() {
                     @Override
