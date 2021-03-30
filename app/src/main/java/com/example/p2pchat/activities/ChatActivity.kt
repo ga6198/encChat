@@ -10,22 +10,15 @@ import com.example.p2pchat.objects.ChatMessage
 import com.example.p2pchat.objects.User
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
-import java.util.*
 import android.database.DataSetObserver
 import android.widget.AbsListView
 import com.example.p2pchat.adapters.ChatMessageArrayAdapter
 import com.example.p2pchat.objects.SessionKey
 import com.example.p2pchat.utils.CryptoHelper
-import com.example.p2pchat.utils.RSAAlg
-import com.example.p2pchat.utils.SecretKeyAlg
 import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.firestore.Query
-import kotlinx.android.synthetic.main.chat_preview.*
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.interfaces.RSAPrivateKey
-import java.security.interfaces.RSAPublicKey
-import kotlin.collections.HashMap
 
 
 class ChatActivity : AppCompatActivity() {
@@ -55,10 +48,13 @@ class ChatActivity : AppCompatActivity() {
         val usernameTextView = findViewById<TextView>(R.id.usernameText)
         usernameTextView.setText(otherUser?.username) //usernameTextView.setText(otherUsername)
 
+        /*
         //establish the secret key for this chat
         val sharedPrefsHandler = SharedPreferencesHandler(this)
         currentUser?.privateKey = sharedPrefsHandler.getPrivateKey(currentUser?.id)
         secretKey = CryptoHelper.generateCommonSecretKey(currentUser?.privateKey as PrivateKey?, otherUser?.publicKey as PublicKey?)
+
+         */
 
         /*
         chat adapter
@@ -71,11 +67,11 @@ class ChatActivity : AppCompatActivity() {
 
         //set up key listener
         if(currentUser != null) {
-            setUpKeyListener(currentUser!!, chat);
+            loadSessionKeys(currentUser!!, chat, chatArrayAdapter);
         }
 
         //set up chat message listener
-        setUpChatListener(chat, chatArrayAdapter)
+        //setUpChatListener(chat, chatArrayAdapter)
 
         //onclicks
         if(currentUser != null && otherUser != null){
@@ -106,21 +102,17 @@ class ChatActivity : AppCompatActivity() {
     }
 
     //loads all existing secret keys and listens for new secret keys
-    private fun setUpKeyListener(currentUser:User, chat: Chat){
+    private fun loadSessionKeys(currentUser:User, chat: Chat, chatArrayAdapter: ChatMessageArrayAdapter){
         val db = FirebaseFirestore.getInstance()
         val keysRef = db.collection("chats").document(chat.id).collection("sessionKeys")
 
-        keysRef.orderBy("timeCreated", Query.Direction.ASCENDING).addSnapshotListener{value, error ->
-            if (error != null) {
-                Log.w("ChatActivity.kt", "Listen for keys failed.", error)
-                return@addSnapshotListener
-            }
+        keysRef.orderBy("timeCreated", Query.Direction.ASCENDING).get().addOnSuccessListener{values ->
 
             //get the timestamps, and load the corresponding keys from SharedPreferences. Add them to the secretKeys HashMap
             //if the key does not exist, that means it is new and must be decrypted and saved to SharedPreferences
             //TODO: This may add values to the list multiple times. Make it so only keys not in the list are added
             //TODO: refactor so that this data is all retrieved when the page is loaded. On complete, set up the message listener. If a new key is added, reload the page
-            for (doc in value!!){
+            for (doc in values!!){
                 val keyData = doc.getData()
 
                 val timeCreated = keyData["timeCreated"] as Timestamp?
@@ -156,6 +148,9 @@ class ChatActivity : AppCompatActivity() {
                     }
                 }
             }
+
+            //set up the chat listener after all keys are loaded
+            setUpChatListener(chat, chatArrayAdapter)
         }
     }
 

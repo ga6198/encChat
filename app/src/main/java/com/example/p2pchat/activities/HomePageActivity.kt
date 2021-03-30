@@ -105,10 +105,13 @@ class HomePageActivity : AppCompatActivity() {
                                 KeyType.PUBLIC,
                                 Constants.identityKeyAlg
                             )
+                            /*
                             val secretKey = CryptoHelper.generateCommonSecretKey(
                                 currentUser!!.privateKey as PrivateKey?,
                                 otherPublicKey as PublicKey?
                             )
+
+                             */
 
                             //TODO: Fix the home page activity, so the decrypted message is shown
 

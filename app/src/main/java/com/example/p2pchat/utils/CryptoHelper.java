@@ -2,6 +2,7 @@ package com.example.p2pchat.utils;
 
 //import com.example.p2pchat.R;
 import android.util.Base64;
+import android.util.Log;
 
 import com.example.p2pchat.objects.SessionKey;
 
@@ -32,7 +33,8 @@ public class CryptoHelper {
             return keyStr;
         }
         catch (NullPointerException e){
-            e.printStackTrace();
+            //e.printStackTrace();
+            Log.d("CryptoHelper encodeKey","Key was null");
             return null;
         }
     }
@@ -63,7 +65,8 @@ public class CryptoHelper {
             return key;
         }
         catch (NullPointerException e){
-            e.printStackTrace();
+            //e.printStackTrace();
+            Log.d("CryptoHelper decodeKey","Key was null");
             return null;
         }
     }
