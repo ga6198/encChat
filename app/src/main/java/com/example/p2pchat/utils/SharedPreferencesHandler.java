@@ -169,16 +169,21 @@ public class SharedPreferencesHandler {
     public Key getPublicKey(String userId) throws InvalidKeySpecException, NoSuchAlgorithmException {
         String encodedPublicKey = sharedPref.getString(userId + "_public_key", "");
         Log.d("Encoded public key", encodedPublicKey);
-        Key publicKey = CryptoHelper.decodeKey(encodedPublicKey, KeyType.PUBLIC, Constants.identityKeyAlg);
-        return publicKey;
+        if(!encodedPublicKey.equals("")) {
+            Key publicKey = CryptoHelper.decodeKey(encodedPublicKey, KeyType.PUBLIC, Constants.identityKeyAlg);
+            return publicKey;
+        }
+        return null;
     }
 
     public Key getPrivateKey(String userId) throws CertificateException, UnrecoverableEntryException, NoSuchAlgorithmException, KeyStoreException, IOException, IllegalBlockSizeException, InvalidKeyException, BadPaddingException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeySpecException {
         String encodedPrivateKey = sharedPref.getString(userId + "_private_key", "");
         Log.d("Encoded private key", encodedPrivateKey);
-        Key privateKey = CryptoHelper.decodeKey(encodedPrivateKey, KeyType.PRIVATE, Constants.identityKeyAlg);
-
-        return privateKey;
+        if(!encodedPrivateKey.equals("")) {
+            Key privateKey = CryptoHelper.decodeKey(encodedPrivateKey, KeyType.PRIVATE, Constants.identityKeyAlg);
+            return privateKey;
+        }
+        return null;
     }
 
     /*
@@ -208,15 +213,21 @@ public class SharedPreferencesHandler {
     public Key getSignedPrekeyPublic(String userId) throws InvalidKeySpecException, NoSuchAlgorithmException {
         String encodedPublicKey = sharedPref.getString(userId + "_signed_prekey_public", "");
         Log.d("Encoded public key", encodedPublicKey);
-        Key publicKey = CryptoHelper.decodeKey(encodedPublicKey, KeyType.PUBLIC, Constants.signedPrekeyAlg);
-        return publicKey;
+        if(!encodedPublicKey.equals("")) {
+            Key publicKey = CryptoHelper.decodeKey(encodedPublicKey, KeyType.PUBLIC, Constants.signedPrekeyAlg);
+            return publicKey;
+        }
+        return null;
     }
 
     public Key getSignedPrekeyPrivate(String userId) throws InvalidKeySpecException, NoSuchAlgorithmException {
         String encodedPrivateKey = sharedPref.getString(userId + "_signed_prekey_private", "");
         Log.d("Encoded private key", encodedPrivateKey);
-        Key privateKey = CryptoHelper.decodeKey(encodedPrivateKey, KeyType.PRIVATE, Constants.signedPrekeyAlg);
-        return privateKey;
+        if(!encodedPrivateKey.equals("")) {
+            Key privateKey = CryptoHelper.decodeKey(encodedPrivateKey, KeyType.PRIVATE, Constants.signedPrekeyAlg);
+            return privateKey;
+        }
+        return null;
     }
 
     /**
@@ -228,14 +239,12 @@ public class SharedPreferencesHandler {
     public byte[] getSessionKey(String chatId, Timestamp keyCreationTime){
         String encodedSessionKey = sharedPref.getString(chatId + "_" + keyCreationTime.getSeconds(), "");
         Log.d("Encoded session key", encodedSessionKey);
-        //if you didn't get any value back
-        if(encodedSessionKey.equals("")){
-            return null; //return new byte[]{0x00}; //should be a 0 array
-        }
-        else{
+        //if you didn't get any value back, don't try to decode
+        if(!encodedSessionKey.equals("")){
             byte[] sessionKey = Base64.decode(encodedSessionKey, Base64.DEFAULT);
             return sessionKey;
         }
+        return null;
     }
 
     public void setContext(Context context) {

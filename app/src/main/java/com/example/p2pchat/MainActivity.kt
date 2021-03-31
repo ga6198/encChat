@@ -93,10 +93,61 @@ class MainActivity : AppCompatActivity() {
                         val sharedPrefHandler = SharedPreferencesHandler(this)
                         val userPubKey = sharedPrefHandler.getPublicKey(userId)
                         val signedPrekeyPublic = sharedPrefHandler.getSignedPrekeyPublic(userId)
-                        val currentUser = User(userId, usernameInput, userPubKey, signedPrekeyPublic)
+                        var currentUser = User(userId, usernameInput, userPubKey, signedPrekeyPublic)
 
-                        intent.putExtra("user", currentUser)
-                        startActivity(intent)
+                        //if the user is using a new device, need to create new public and private keys
+                        if(usingNewDevice(currentUser)){
+                            //TODO: Put all this code in a transaction. For all the user's chats, upload a new session key
+                            //TODO: Will probably have to query usersChats first to get chat ids. Then upload the new session keys
+                            val db = FirebaseFirestore.getInstance()
+                            //user new key data
+                            val userData = hashMapOf<String, Any>(
+                                "publicKey" to currentUser.encodedPublicKey,
+                                "signedPrekeyPublic" to currentUser.encodedSignedPrekeyPublic
+                            )
+                            val userRef = db.collection("users").document(currentUser.id)
+
+                            db.runTransaction{transaction ->
+                                //recreate pub-prv keys
+                                currentUser = regenerateUser(currentUser)
+
+                                //upload to the new keys to the database
+                                transaction.update(userRef, userData)
+                            }.addOnSuccessListener{
+                                //go to the next page
+                                intent.putExtra("user", currentUser)
+                                startActivity(intent)
+                            }
+                            .addOnFailureListener{
+                                Log.d("Regenerating user", "failed")
+                            }
+
+                            /*
+                             val db = FirebaseFirestore.getInstance()
+
+                            //upload to the new keys to the database
+                            val userData = hashMapOf<String, Any>(
+                                "publicKey" to currentUser.encodedPublicKey,
+                                "signedPrekeyPublic" to currentUser.encodedSignedPrekeyPublic
+                            )
+                            //used "set" to create document with specific id
+                            val userRef = db.collection("users").document(currentUser.id)
+                            userRef.update(userData)
+                                .addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        //go to the next page
+                                        intent.putExtra("user", currentUser)
+                                        startActivity(intent)
+                                    }
+                                }
+
+                             */
+                        }
+                        //otherwise, if not using a new device, go directly to the next page
+                        else{
+                            intent.putExtra("user", currentUser)
+                            startActivity(intent)
+                        }
                     }
                     else{
                         Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show()
@@ -108,8 +159,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun retrievePublicKeys(user: User){
+    //check if the user is logging in from a new device (public keys, private keys should be null)
+    fun usingNewDevice(user: User): Boolean{
+        if (user.publicKey == null && user.signedPrekeyPublic == null){
+            return true
+        }
+        return false
+    }
 
+    //resets the user's public and private keys, and saves them to shared preferences
+    fun regenerateUser(user:User): User{
+        //regenerates the public and private keys
+        val regeneratedUser = User(user.username)
+        regeneratedUser.id = user.id
+        regeneratedUser.regenerated = true
+
+        //save all the information to shared preferences
+        val sharedPrefHandler = SharedPreferencesHandler(this)
+        sharedPrefHandler.saveUser(regeneratedUser)
+
+        return regeneratedUser
     }
 
     //ensures that pressing the "back" button will close the app instead of going to previous activities

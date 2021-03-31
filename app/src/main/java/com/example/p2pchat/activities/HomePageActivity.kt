@@ -21,6 +21,7 @@ import com.example.p2pchat.objects.User
 import com.example.p2pchat.utils.Constants
 import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Query
 import java.security.PrivateKey
 import java.security.PublicKey
 
@@ -40,6 +41,9 @@ class HomePageActivity : AppCompatActivity() {
 
         //Bottom navigation menu
         val navigationBar = NavigationBar(this)
+
+        //alert a user with a new device that they may not be able to decrypt old messages
+        currentUser?.let { alertRegeneratedUser(it) }
 
         /*
         existing chats list adapter
@@ -87,7 +91,7 @@ class HomePageActivity : AppCompatActivity() {
         val chatsRef = db.collection("chats")
         val usersChatsRef = db.collection("users").document(currentUser?.id.toString()).collection("usersChats")
 
-        usersChatsRef.orderBy("lastMessageTime").get()
+        usersChatsRef.orderBy("lastMessageTime", Query.Direction.DESCENDING).get()
             .addOnCompleteListener{task->
                 if(task.isSuccessful()){
                     val chats = task.result
@@ -160,6 +164,19 @@ class HomePageActivity : AppCompatActivity() {
         addButton.setOnClickListener{
             openDialog()
         }
+    }
+
+    //Alert a regenerated user that they may not be able to decrypt old messages
+    fun alertRegeneratedUser(user: User){
+        if(user.regenerated) {
+            val builder = AlertDialog.Builder(this)
+            builder.setTitle("New device detected")
+            builder.setMessage("You may not be able to decrypt old messages")
+            builder.show()
+        }
+
+        //reset this so the alert does not show again
+        user.regenerated = false
     }
 
     //open the add user dialog

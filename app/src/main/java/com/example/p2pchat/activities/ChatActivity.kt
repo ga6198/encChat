@@ -66,8 +66,8 @@ class ChatActivity : AppCompatActivity() {
         //TODO: Sometimes, the chats load before the keys are retrieved, causing the program to crash
 
         //set up key listener
-        if(currentUser != null) {
-            loadSessionKeys(currentUser!!, chat, chatArrayAdapter);
+        if(currentUser != null && otherUser!= null) {
+            loadSessionKeys(currentUser!!, otherUser!!, chat, chatArrayAdapter);
         }
 
         //set up chat message listener
@@ -102,7 +102,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     //loads all existing secret keys and listens for new secret keys
-    private fun loadSessionKeys(currentUser:User, chat: Chat, chatArrayAdapter: ChatMessageArrayAdapter){
+    private fun loadSessionKeys(currentUser: User, otherUser: User, chat: Chat, chatArrayAdapter: ChatMessageArrayAdapter){
         val db = FirebaseFirestore.getInstance()
         val keysRef = db.collection("chats").document(chat.id).collection("sessionKeys")
 
@@ -120,7 +120,7 @@ class ChatActivity : AppCompatActivity() {
                     //get the key from sharedPreferences
                     val sharedPrefsHandler = SharedPreferencesHandler(this)
                     val currentSessionKey = sharedPrefsHandler.getSessionKey(chat.id, timeCreated)
-                    //if the session key is nonexistent, that means the key should be
+                    //if the session key is nonexistent, that means the key should be retrieved from the db
                     if(currentSessionKey == null){ //if(currentSessionKey.equals(byteArrayOf(0x00))){
                         //need to decrypt the key from the server
                         val encryptedSessionKey = keyData["sessionKey"] as String?
@@ -128,17 +128,28 @@ class ChatActivity : AppCompatActivity() {
                         //need to get the private key from sharedPreferences to decrypt
                         val privateKey = sharedPrefsHandler.getPrivateKey(currentUser.id)
 
+                        //TODO: this decryption won't work with regenerated keys. Maybe upload a field to each of the user's chats, saying the session keys must be regenerated
+                        //TODO: add cloud functions? If a user uploads a new public key,
                         //decrypt the session key
-                        val sessionKeyBytes = CryptoHelper.decryptSessionKey(encryptedSessionKey, privateKey as PrivateKey)
+                        try {
+                            val sessionKeyBytes = CryptoHelper.decryptSessionKey(
+                                encryptedSessionKey,
+                                privateKey as PrivateKey
+                            )
 
-                        //add the key to the sessionKeys list
-                        val sessionKey = SessionKey(chat.id, sessionKeyBytes, timeCreated)
-                        if(!sessionKeys.contains(sessionKey)) {
-                            sessionKeys.add(sessionKey)
+                            //add the key to the sessionKeys list
+                            val sessionKey = SessionKey(chat.id, sessionKeyBytes, timeCreated)
+                            if (!sessionKeys.contains(sessionKey)) {
+                                sessionKeys.add(sessionKey)
+                            }
+
+                            //save the key to sharedPreferences
+                            sharedPrefsHandler.saveSessionKey(chat.id, timeCreated, sessionKeyBytes)
                         }
-
-                        //save the key to sharedPreferences
-                        sharedPrefsHandler.saveSessionKey(chat.id, timeCreated, sessionKeyBytes)
+                        catch(e: Exception){
+                            //If this is run, it means that the person's account was regenerated
+                            Log.d("loadSessionKeys()", "Certain session key decryptions skipped")
+                        }
                     }
                     else{
                         val sessionKey = SessionKey(chat.id, currentSessionKey, timeCreated)
@@ -149,8 +160,50 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
 
-            //set up the chat listener after all keys are loaded
-            setUpChatListener(chat, chatArrayAdapter)
+            //if there are no keys in the sessionKeys array, this means a new key must be generated for this chat
+            if(sessionKeys.size == 0){
+                //new session key data
+                val sessionKey = CryptoHelper.generateSessionKey()
+                val encryptedSessionKey = CryptoHelper.encryptSessionKey(sessionKey, otherUser.publicKey as PublicKey) //CryptoHelper.generateEncryptedSessionKey(otherUser.publicKey as PublicKey)
+
+                //correct sessionKey collection references stored in keysRef variable
+                val sessionKeyRef = keysRef.document() //auto-generated id
+                val timeCreated = Timestamp.now()
+                val sessionKeyData = hashMapOf(
+                    "sessionKey" to encryptedSessionKey,
+                    "uploader" to currentUser.id,
+                    "decrypter" to otherUser.id, //the person who will use his private key to decrypt the session key
+                    "timeCreated" to timeCreated
+                )
+
+                //upload the keys
+                /*
+                db.runTransaction{transaction ->
+                    //save the session key data
+                    transaction.set(sessionKeyRef, sessionKeyData)
+
+                    //save the session key to sharedPreferences
+                    val sharedPrefHandler = SharedPreferencesHandler(this)
+                    sharedPrefHandler.saveSessionKey(chat.id, timeCreated, sessionKey)
+
+                    //add the key to the sessionKeys list
+                    val newSessionKey = SessionKey(chat.id, sessionKey, timeCreated)
+                    if(!sessionKeys.contains(newSessionKey)) {
+                        sessionKeys.add(newSessionKey)
+                    }
+                }.addOnSuccessListener {
+                    //once the new key is retrieved,
+
+                    //set up the chat listener after all keys are loaded
+                    setUpChatListener(chat, chatArrayAdapter)
+                }
+                */
+                setUpChatListener(chat, chatArrayAdapter)
+            }
+            else{
+                //set up the chat listener after all keys are loaded
+                setUpChatListener(chat, chatArrayAdapter)
+            }
         }
     }
 
@@ -183,7 +236,7 @@ class ChatActivity : AppCompatActivity() {
                 //decrypt message
                 var decryptedMessage = ""
                 //if the key is valid, decrypt the message
-                if(messageData["message"] != null && currentSessionKey.sessionKey != null) {
+                if(messageData["message"] != null && currentSessionKey != null) {
                     decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, currentSessionKey.sessionKey); //decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, secretKey)
                 }
                 //if the key is not valid, just display the encrypted message

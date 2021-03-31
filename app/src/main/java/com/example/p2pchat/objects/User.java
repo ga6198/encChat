@@ -29,6 +29,7 @@ public class User implements Parcelable {
     private Key privateKey;
     private Key signedPrekeyPublic;
     private Key signedPrekeyPrivate;
+    private boolean regenerated; //represents if the user has been recreated with new keys
 
     public User(){
         this.username = "";
@@ -48,6 +49,8 @@ public class User implements Parcelable {
         KeyPair signedPrekeys = CryptoHelper.generateKeyPair(Constants.signedPrekeyAlg);
         this.signedPrekeyPublic = signedPrekeys.getPublic();
         this.signedPrekeyPrivate = signedPrekeys.getPrivate();
+
+        setRegenerated(false);
     }
 
     //main constructor used for creating this object class
@@ -56,6 +59,7 @@ public class User implements Parcelable {
         setUsername(username);
         setPublicKey(publicKey);
         setSignedPrekeyPublic(signedPrekeyPublic);
+        setRegenerated(false);
     }
 
     // 99.9% of the time you can just ignore this
@@ -74,6 +78,7 @@ public class User implements Parcelable {
         out.writeString(CryptoHelper.encodeKey(this.privateKey));
         out.writeString(CryptoHelper.encodeKey(this.signedPrekeyPublic));
         out.writeString(CryptoHelper.encodeKey(this.signedPrekeyPrivate));
+        out.writeInt(this.regenerated ? 1 : 0); //out.writeBoolean(this.regenerated);
     }
 
     // this is used to regenerate your object. All Parcelables must have a CREATOR that implements these two methods
@@ -126,6 +131,8 @@ public class User implements Parcelable {
         } catch (InvalidKeySpecException e) {
             e.printStackTrace();
         }
+
+        setRegenerated(in.readInt() == 1); //setRegenerated(in.readBoolean());
     }
 
     public String getEncodedPublicKey(){
@@ -256,4 +263,13 @@ public class User implements Parcelable {
     public void setSignedPrekeyPublic(Key signedPrekeyPublic) {
         this.signedPrekeyPublic = signedPrekeyPublic;
     }
+
+    public boolean getRegenerated(){
+        return this.regenerated;
+    }
+
+    public void setRegenerated(boolean regenerated) {
+        this.regenerated = regenerated;
+    }
+
 }
