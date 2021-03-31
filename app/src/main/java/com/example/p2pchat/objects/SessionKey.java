@@ -26,6 +26,21 @@ public class SessionKey {
         setTimeCreated(timeCreated);
     }
 
+    //if the key is older than n days, it is expired
+    public boolean isExpired(){
+        Timestamp currentTime = Timestamp.now();
+        long keyDuration = currentTime.getSeconds() - this.timeCreated.getSeconds();
+
+        long days = 7; //set to expire after seven days
+        long daysInSeconds = days * 24 * 60 * 60;
+
+        if(keyDuration > daysInSeconds){
+            return true;
+        }
+
+        return false;
+    }
+
     /*
     Equality methods for use with ArrayList contains
      */

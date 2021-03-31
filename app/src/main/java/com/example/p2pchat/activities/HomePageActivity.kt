@@ -15,6 +15,7 @@ import android.widget.ListView
 import com.example.p2pchat.adapters.ChatListArrayAdapter
 import com.example.p2pchat.adapters.NavigationBar
 import com.example.p2pchat.objects.Chat
+import com.example.p2pchat.objects.SessionKey
 import com.example.p2pchat.utils.CryptoHelper
 import com.example.p2pchat.utils.KeyType
 import com.example.p2pchat.objects.User
@@ -77,7 +78,12 @@ class HomePageActivity : AppCompatActivity() {
                     )
 
                     //open the chat
-                    currentUser?.let { openChat(it, otherUser, clickedChat.id) }
+                    if(currentUser != null) {
+                        //check for expired keys
+                        //After a certain duration of time, upload a new session key
+                        checkForExpiredKey(currentUser!!, otherUser, clickedChat.id)
+                        //openChat(currentUser!!, otherUser, clickedChat.id)
+                    }
                 }
                 else{
                     Log.d("HomePageActivity.kt", "Searching for other user failed")
@@ -380,8 +386,11 @@ class HomePageActivity : AppCompatActivity() {
                         }
                         //chat already exists, so open it
                         else{
+                            //After a certain duration of time, upload a new session key
                             val chatId = returnedSnapshot.documents[0].id //just getting the first document, which should be the only chat
-                            openChat(currentUser, otherUser, chatId)
+
+                            //check if the current session key is expired
+                            checkForExpiredKey(currentUser, otherUser, chatId)
                         }
                     }
                 }
@@ -389,12 +398,61 @@ class HomePageActivity : AppCompatActivity() {
 
     }
 
+    fun checkForExpiredKey(currentUser: User, otherUser: User, chatId: String){
+        val db = FirebaseFirestore.getInstance()
+
+        //check if the current session key is expired
+        val chatRef = db.collection("chats").document(chatId)
+        val sessionKeysRef = chatRef.collection("sessionKeys")
+
+        //get the latest session key and see if it is >n days old
+        sessionKeysRef
+            .orderBy("timeCreated", Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .addOnSuccessListener {querySnapshot ->
+                val keyData = querySnapshot.documents[0]
+                val timeCreated = keyData["timeCreated"] as Timestamp?
+                val lastSessionKey = SessionKey()
+                lastSessionKey.timeCreated = timeCreated
+
+                //if the session key is too old, generate a new one
+                if(lastSessionKey.isExpired){
+                    //new session key data
+                    val sessionKey = CryptoHelper.generateSessionKey()
+                    val encryptedSessionKey = CryptoHelper.encryptSessionKey(sessionKey, otherUser.publicKey as PublicKey) //CryptoHelper.generateEncryptedSessionKey(otherUser.publicKey as PublicKey)
+
+                    val sessionKeyRef = sessionKeysRef.document() //auto-generated id
+                    val sessionKeyData = hashMapOf(
+                        "sessionKey" to encryptedSessionKey,
+                        "uploader" to currentUser.id,
+                        "decrypter" to otherUser.id, //the person who will use his private key to decrypt the session key
+                        "timeCreated" to timeCreated
+                    )
+
+                    //save the new session key
+                    db.runTransaction{transaction ->
+                        //save the session key data
+                        transaction.set(sessionKeyRef, sessionKeyData)
+
+                        //save the session key to sharedPreferences
+                        val sharedPrefHandler = SharedPreferencesHandler(this)
+                        sharedPrefHandler.saveSessionKey(chatId, timeCreated, sessionKey)
+                    }.addOnSuccessListener {
+                        openChat(currentUser, otherUser, chatId)
+                    }
+                }
+                else{
+                    //otherwise, switch to the chat page normally
+                    openChat(currentUser, otherUser, chatId)
+                }
+            }
+    }
+
     fun openChat(currentUser: User, otherUser: User, chatId: String){
         val intent = Intent(this, ChatActivity::class.java)
-
         intent.putExtra("user", currentUser)
         intent.putExtra("otherUser", otherUser)
-
         intent.putExtra("chatId", chatId)
 
         startActivity(intent)
