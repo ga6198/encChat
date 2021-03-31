@@ -177,7 +177,6 @@ class ChatActivity : AppCompatActivity() {
                 )
 
                 //upload the keys
-                /*
                 db.runTransaction{transaction ->
                     //save the session key data
                     transaction.set(sessionKeyRef, sessionKeyData)
@@ -192,13 +191,12 @@ class ChatActivity : AppCompatActivity() {
                         sessionKeys.add(newSessionKey)
                     }
                 }.addOnSuccessListener {
-                    //once the new key is retrieved,
+                    //once the new key is retrieved, you can set up the chat
 
                     //set up the chat listener after all keys are loaded
                     setUpChatListener(chat, chatArrayAdapter)
                 }
-                */
-                setUpChatListener(chat, chatArrayAdapter)
+                //setUpChatListener(chat, chatArrayAdapter)
             }
             else{
                 //set up the chat listener after all keys are loaded
@@ -237,7 +235,14 @@ class ChatActivity : AppCompatActivity() {
                 var decryptedMessage = ""
                 //if the key is valid, decrypt the message
                 if(messageData["message"] != null && currentSessionKey != null) {
-                    decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, currentSessionKey.sessionKey); //decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, secretKey)
+                    try{
+                        decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, currentSessionKey.sessionKey); //decryptedMessage = CryptoHelper.decryptMessage(messageData["message"] as String, secretKey)
+                    }
+                    catch (e: Exception){
+                        decryptedMessage = messageData["message"] as String
+                        //maybe alert the user they need to refresh.
+                        //Or, automatically refresh
+                    }
                 }
                 //if the key is not valid, just display the encrypted message
                 else if(messageData["message"] != null){
