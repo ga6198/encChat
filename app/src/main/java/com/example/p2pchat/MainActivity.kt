@@ -21,6 +21,7 @@ import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.messaging.FirebaseMessaging
 import java.security.Key
 import java.util.*
 
@@ -52,10 +53,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        login()
+        setupLogin()
     }
 
-    fun login(){
+    fun setupLogin(){
         val submitButton: Button = findViewById<Button>(R.id.submitButton)
         val usernameText: TextView = findViewById<TextView>(R.id.usernameText)
         val passwordText: TextView = findViewById<TextView>(R.id.passwordText)
@@ -84,69 +85,19 @@ class MainActivity : AppCompatActivity() {
 
                         //redirect to main page
                         val intent = Intent(this, HomePageActivity::class.java)
-                        //intent.putExtra("userId", userId)
-                        //intent.putExtra("username", usernameInput)
 
-                        //currentUser.id = userId
-                        //currentUser.username = usernameInput
                         //get public keys from shared preferences
                         val sharedPrefHandler = SharedPreferencesHandler(this)
                         val userPubKey = sharedPrefHandler.getPublicKey(userId)
                         val signedPrekeyPublic = sharedPrefHandler.getSignedPrekeyPublic(userId)
                         var currentUser = User(userId, usernameInput, userPubKey, signedPrekeyPublic)
 
-                        //if the user is using a new device, need to create new public and private keys
-                        if(usingNewDevice(currentUser)){
-                            //TODO: Put all this code in a transaction. For all the user's chats, upload a new session key
-                            //TODO: Will probably have to query usersChats first to get chat ids. Then upload the new session keys
-                            val db = FirebaseFirestore.getInstance()
-                            //user new key data
-                            val userData = hashMapOf<String, Any>(
-                                "publicKey" to currentUser.encodedPublicKey,
-                                "signedPrekeyPublic" to currentUser.encodedSignedPrekeyPublic
-                            )
-                            val userRef = db.collection("users").document(currentUser.id)
+                        //get device token and then login
+                        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                            var userWithToken = currentUser
+                            userWithToken.deviceToken = token
 
-                            db.runTransaction{transaction ->
-                                //recreate pub-prv keys
-                                currentUser = regenerateUser(currentUser)
-
-                                //upload to the new keys to the database
-                                transaction.update(userRef, userData)
-                            }.addOnSuccessListener{
-                                //go to the next page
-                                intent.putExtra("user", currentUser)
-                                startActivity(intent)
-                            }
-                            .addOnFailureListener{
-                                Log.d("Regenerating user", "failed")
-                            }
-
-                            /*
-                             val db = FirebaseFirestore.getInstance()
-
-                            //upload to the new keys to the database
-                            val userData = hashMapOf<String, Any>(
-                                "publicKey" to currentUser.encodedPublicKey,
-                                "signedPrekeyPublic" to currentUser.encodedSignedPrekeyPublic
-                            )
-                            //used "set" to create document with specific id
-                            val userRef = db.collection("users").document(currentUser.id)
-                            userRef.update(userData)
-                                .addOnCompleteListener { task ->
-                                    if (task.isSuccessful) {
-                                        //go to the next page
-                                        intent.putExtra("user", currentUser)
-                                        startActivity(intent)
-                                    }
-                                }
-
-                             */
-                        }
-                        //otherwise, if not using a new device, go directly to the next page
-                        else{
-                            intent.putExtra("user", currentUser)
-                            startActivity(intent)
+                            loginUser(currentUser)
                         }
                     }
                     else{
@@ -156,6 +107,43 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+        }
+    }
+
+    //actually moves to the next page
+    private fun loginUser(user:User){
+        var currentUser = user
+
+        //if the user is using a new device, need to create new public and private keys
+        if(usingNewDevice(currentUser)){
+            val db = FirebaseFirestore.getInstance()
+            //user new key data
+            val userData = hashMapOf<String, Any>(
+                "publicKey" to currentUser.encodedPublicKey,
+                "signedPrekeyPublic" to currentUser.encodedSignedPrekeyPublic,
+                "deviceToken" to currentUser.deviceToken //new device means new device token as well
+            )
+            val userRef = db.collection("users").document(currentUser.id)
+
+            db.runTransaction{transaction ->
+                //recreate pub-prv keys
+                currentUser = regenerateUser(currentUser)
+
+                //upload to the new keys to the database
+                transaction.update(userRef, userData)
+            }.addOnSuccessListener{
+                //go to the next page
+                intent.putExtra("user", currentUser)
+                startActivity(intent)
+            }
+                .addOnFailureListener{
+                    Log.d("Regenerating user", "failed")
+                }
+        }
+        //otherwise, if not using a new device, go directly to the next page
+        else{
+            intent.putExtra("user", currentUser)
+            startActivity(intent)
         }
     }
 

@@ -19,6 +19,7 @@ import com.example.p2pchat.objects.User
 import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import java.util.*
 
 class RegistrationActivity : AppCompatActivity() {
@@ -88,8 +89,14 @@ class RegistrationActivity : AppCompatActivity() {
         mAuth.createUserWithEmailAndPassword(user.username, user.password).addOnCompleteListener {
 
             if(it.isSuccessful){
-                //save the user to the database
-                saveUser(user)
+                //get device token and save the user
+                FirebaseMessaging.getInstance().token.addOnSuccessListener {token ->
+                    var userWithToken = user
+                    userWithToken.deviceToken = token
+
+                    //save the user to the database
+                    saveUser(userWithToken)
+                }
             }
             else{
                 println(it.exception)
@@ -110,8 +117,10 @@ class RegistrationActivity : AppCompatActivity() {
         val user = hashMapOf<String, Any>(
             "username" to newUser.username,
             "publicKey" to newUser.encodedPublicKey,
-            "signedPrekeyPublic" to newUser.encodedSignedPrekeyPublic //,
+            "signedPrekeyPublic" to newUser.encodedSignedPrekeyPublic,
+            "deviceToken" to newUser.deviceToken
             //"signature" to newUser.getSignature(this) //signature cannot be added before the saveUser function is called and saves the user to SharedPrefs
+
         )
 
         println(user["publicKey"])

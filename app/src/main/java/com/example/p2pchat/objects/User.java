@@ -30,6 +30,7 @@ public class User implements Parcelable {
     private Key signedPrekeyPublic;
     private Key signedPrekeyPrivate;
     private boolean regenerated; //represents if the user has been recreated with new keys
+    private String deviceToken;
 
     public User(){
         this.username = "";
@@ -79,6 +80,7 @@ public class User implements Parcelable {
         out.writeString(CryptoHelper.encodeKey(this.signedPrekeyPublic));
         out.writeString(CryptoHelper.encodeKey(this.signedPrekeyPrivate));
         out.writeInt(this.regenerated ? 1 : 0); //out.writeBoolean(this.regenerated);
+        out.writeString(this.deviceToken);
     }
 
     // this is used to regenerate your object. All Parcelables must have a CREATOR that implements these two methods
@@ -133,6 +135,7 @@ public class User implements Parcelable {
         }
 
         setRegenerated(in.readInt() == 1); //setRegenerated(in.readBoolean());
+        setDeviceToken(in.readString());
     }
 
     public String getEncodedPublicKey(){
@@ -272,4 +275,11 @@ public class User implements Parcelable {
         this.regenerated = regenerated;
     }
 
+    public void setDeviceToken(String deviceToken) {
+        this.deviceToken = deviceToken;
+    }
+
+    public String getDeviceToken() {
+        return deviceToken;
+    }
 }
