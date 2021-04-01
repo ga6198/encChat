@@ -106,6 +106,8 @@ class RegistrationActivity : AppCompatActivity() {
         }
     }
 
+    //TODO: Manually add the missing device tokens to the database
+
     //saves user document to Cloud Firestore
     fun saveUser(newUser: User) {
         //initialize Firestore

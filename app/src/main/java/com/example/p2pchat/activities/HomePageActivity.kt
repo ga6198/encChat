@@ -178,6 +178,8 @@ class HomePageActivity : AppCompatActivity() {
             val builder = AlertDialog.Builder(this)
             builder.setTitle("New device detected")
             builder.setMessage("You may not be able to decrypt old messages")
+            builder.setPositiveButton("OK") { dialog, which ->
+            }
             builder.show()
         }
 

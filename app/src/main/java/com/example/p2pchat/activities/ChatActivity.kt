@@ -12,6 +12,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import android.database.DataSetObserver
 import android.widget.AbsListView
+import androidx.appcompat.app.AlertDialog
 import com.example.p2pchat.adapters.ChatMessageArrayAdapter
 import com.example.p2pchat.objects.SessionKey
 import com.example.p2pchat.utils.CryptoHelper
@@ -19,6 +20,7 @@ import com.example.p2pchat.utils.SharedPreferencesHandler
 import com.google.firebase.firestore.Query
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.sql.Time
 
 
 class ChatActivity : AppCompatActivity() {
@@ -281,9 +283,12 @@ class ChatActivity : AppCompatActivity() {
                 sendText.setText("")
             }
         }
+
+        //challenge-response button
+        setUpChallengeResponse(currentUser, otherUser, chat)
     }
 
-    //TODO: refactor this to pass in the current secret key. The latest key should be the last one in the list
+    //uses the current secret key. The latest key should be the last one in the list
     private fun sendMessage(message: String, currentUser: User, otherUser: User, chat: Chat){
         //encrypt the message
         //val encryptedMessage = encryptMessage(message, currentUser, otherUser)
@@ -342,6 +347,54 @@ class ChatActivity : AppCompatActivity() {
             //save the last chat message data for users
             transaction.update(currentUserRef, currentUserLastMessageData)
             transaction.update(otherUserRef, otherUserLastMessageData)
+        }
+    }
+
+    private fun setUpChallengeResponse(currentUser: User, otherUser: User, chat: Chat){
+        val challengeButton = findViewById<ImageButton>(R.id.challengeButton)
+
+        challengeButton.setOnClickListener{
+            //open the dialog
+            val builder = AlertDialog.Builder(this)
+            builder.setTitle("Authentication")
+            builder.setMessage("Send a push challenge?")
+            builder.setNegativeButton("Cancel"){dialog, which->
+                //automatically closes dialog
+            }
+            builder.setPositiveButton("Confirm") { dialog, which ->
+                //upload a request to the database
+                uploadChallenge(currentUser, otherUser, chat)
+            }
+
+            builder.show()
+        }
+    }
+
+    private fun uploadChallenge(currentUser: User, otherUser: User, chat: Chat){
+        val db = FirebaseFirestore.getInstance()
+        val challengeRef = db.collection("challenges").document() //new document
+
+        val challengeData = hashMapOf<String, Any>(
+            "time" to Timestamp.now(),
+            "chatId" to chat.id,
+            "senderId" to currentUser.id,
+            "senderUsername" to currentUser.username,
+            "senderDeviceToken" to currentUser.deviceToken,
+            "receiverId" to otherUser.id,
+            "receiverUsername" to otherUser.username,
+            "receiverDeviceToken" to otherUser.deviceToken
+        )
+
+        //upload the data
+        challengeRef.set(challengeData).addOnSuccessListener {
+            //open the dialog
+            val builder = AlertDialog.Builder(this)
+            builder.setTitle("Authentication")
+            builder.setMessage("Challenge sent")
+            builder.setPositiveButton("OK") { dialog, which ->
+            }
+
+            builder.show()
         }
     }
 
