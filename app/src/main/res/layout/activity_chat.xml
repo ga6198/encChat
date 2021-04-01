@@ -33,10 +33,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TextView"
-            android:textSize="24sp"
+            android:textSize="18sp"
             app:layout_constraintBottom_toBottomOf="@+id/chatToolbar"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@+id/chatToolbar"
+            app:layout_constraintTop_toTopOf="@+id/chatToolbar" />
+
+        <ImageButton
+            android:id="@+id/imageButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/baseline_connect_without_contact_24"
+            app:layout_constraintBottom_toBottomOf="@+id/chatToolbar"
+            app:layout_constraintEnd_toEndOf="@+id/chatToolbar"
             app:layout_constraintTop_toTopOf="@+id/chatToolbar" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
