@@ -1,14 +1,21 @@
 package com.example.p2pchat.utils;
 
+import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
+
+import java.io.IOException;
+import java.util.Map;
 
 /**
  * NOTE: There can only be one service in each app that receives FCM messages. If multiple
@@ -42,5 +49,30 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Log.d("FirebaseMessaging", "Refreshed token: " + token);
 
         //sendRegistrationToServer(token);
+    }
+
+    /**
+     * When receiving a data payload, actually build the notification
+     *
+     * @param remoteMessage
+     */
+    @Override
+    public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
+        super.onMessageReceived(remoteMessage);
+        RemoteMessage.Notification notification = remoteMessage.getNotification();
+        Map<String, String> data = remoteMessage.getData();
+        sendNotification(notification, data);
+    }
+
+    /**
+     * The function that actually builds and sends the notification
+     * @param notification
+     * @param data
+     */
+    private void sendNotification(RemoteMessage.Notification notification, Map<String, String> data){
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "challenges");
+
+        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(0, notificationBuilder.build());
     }
 }

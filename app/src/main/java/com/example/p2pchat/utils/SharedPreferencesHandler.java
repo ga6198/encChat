@@ -18,6 +18,8 @@ import java.security.NoSuchProviderException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.crypto.BadPaddingException;
@@ -244,6 +246,52 @@ public class SharedPreferencesHandler {
             byte[] sessionKey = Base64.decode(encodedSessionKey, Base64.DEFAULT);
             return sessionKey;
         }
+        return null;
+    }
+
+    /**
+     * Searches shared preference's for a chat's newest session key. Done by extracting the keyCreationTime and checking which one is the latest
+     * @param chatId
+     * @return
+     */
+    public byte[] getLatestChatKey(String chatId){
+        Map<String, ?> allEntries = sharedPref.getAll();
+
+        //get all the keys for the specific chat
+        HashMap<String, String> chatKeys = new HashMap<String, String>();
+        for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
+            //if the key is for the chatid, get it
+            String keyId = entry.getKey();
+            if(keyId.contains(chatId)){
+                String encodedKey = (String)entry.getValue();
+
+                //add the key and encodedKey to the keys map
+                chatKeys.put(keyId, encodedKey);
+            }
+        }
+
+        //search for the key with the latest timestamp
+        String currentEncodedSessionKey = "";
+        int maxTimeInSeconds = 0;
+        for(Map.Entry<String, String> key : chatKeys.entrySet()){
+            //extract timestamp, which is after the last semicolon
+            String keyId = key.getKey();
+            String timeInSecondsStr = keyId.substring(keyId.lastIndexOf("_") + 1);
+            int timeInSeconds = Integer.parseInt(timeInSecondsStr);
+
+            //The max timestamp should be the key that is used
+            if(timeInSeconds > maxTimeInSeconds){
+                maxTimeInSeconds = timeInSeconds;
+                //update the key value that is currently being used
+                currentEncodedSessionKey = key.getValue();
+            }
+        }
+
+        if(!currentEncodedSessionKey.equals("")){
+            byte[] sessionKey = Base64.decode(currentEncodedSessionKey, Base64.DEFAULT);
+            return sessionKey;
+        }
+
         return null;
     }
 

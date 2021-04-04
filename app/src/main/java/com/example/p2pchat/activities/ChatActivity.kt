@@ -112,7 +112,6 @@ class ChatActivity : AppCompatActivity() {
 
             //get the timestamps, and load the corresponding keys from SharedPreferences. Add them to the secretKeys HashMap
             //if the key does not exist, that means it is new and must be decrypted and saved to SharedPreferences
-            //TODO: This may add values to the list multiple times. Make it so only keys not in the list are added
             //TODO: refactor so that this data is all retrieved when the page is loaded. On complete, set up the message listener. If a new key is added, reload the page
             for (doc in values!!){
                 val keyData = doc.getData()

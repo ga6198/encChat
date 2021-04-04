@@ -40,8 +40,36 @@ class MainActivity : AppCompatActivity() {
             .build()
         db.firestoreSettings = settings
 
+        checkIfLoggedIn()
+
         //set onclicks
-        onClick()
+        //onClick()
+    }
+
+    //check if user is already logged in
+    private fun checkIfLoggedIn(){
+        //if the user already is logged in, directly go. to the next page
+        val user = FirebaseAuth.getInstance().currentUser
+        if(user != null){
+            // user is signed in
+
+            // automatically bring the user to the next page
+
+            // for accounts created with FirebaseAuth.signInWithCredential(AuthCredential)
+            if (user.displayName != "" && user.displayName != null){
+                loadPublicKeys(user!!.uid, user.displayName!!)
+            }
+            // for accounts created with FirebaseAuth.createUserWithEmailAndPassword(String, String)
+            else if(user.email != "" && user.email != null){
+                loadPublicKeys(user!!.uid, user.email!!)
+            }
+        }
+        else{
+            // no user is signed in
+
+            //set onclicks
+            onClick()
+        }
     }
 
     fun onClick(){
@@ -84,21 +112,10 @@ class MainActivity : AppCompatActivity() {
                         Log.d("MainActivity.kt", "Current username: ${usernameInput}")
 
                         //redirect to main page
-                        val intent = Intent(this, HomePageActivity::class.java)
+                        //val intent = Intent(this, HomePageActivity::class.java)
 
                         //get public keys from shared preferences
-                        val sharedPrefHandler = SharedPreferencesHandler(this)
-                        val userPubKey = sharedPrefHandler.getPublicKey(userId)
-                        val signedPrekeyPublic = sharedPrefHandler.getSignedPrekeyPublic(userId)
-                        var currentUser = User(userId, usernameInput, userPubKey, signedPrekeyPublic)
-
-                        //get device token and then login
-                        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-                            var userWithToken = currentUser
-                            userWithToken.deviceToken = token
-
-                            loginUser(currentUser)
-                        }
+                        loadPublicKeys(userId, usernameInput)
                     }
                     else{
                         Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show()
@@ -110,9 +127,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun loadPublicKeys(userId: String, usernameInput: String){
+        val sharedPrefHandler = SharedPreferencesHandler(this)
+        val userPubKey = sharedPrefHandler.getPublicKey(userId)
+        val signedPrekeyPublic = sharedPrefHandler.getSignedPrekeyPublic(userId)
+        var currentUser = User(userId, usernameInput, userPubKey, signedPrekeyPublic)
+
+        //get device token and then login
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            var userWithToken = currentUser
+            userWithToken.deviceToken = token
+
+            loginUser(currentUser)
+        }
+    }
+
     //actually moves to the next page
     private fun loginUser(user:User){
         var currentUser = user
+        //redirect to main page
+        val intent = Intent(this, HomePageActivity::class.java)
 
         //if the user is using a new device, need to create new public and private keys
         if(usingNewDevice(currentUser)){

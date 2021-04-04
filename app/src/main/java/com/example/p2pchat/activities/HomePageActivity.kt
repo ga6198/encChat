@@ -115,22 +115,27 @@ class HomePageActivity : AppCompatActivity() {
                                 KeyType.PUBLIC,
                                 Constants.identityKeyAlg
                             )
-                            /*
-                            val secretKey = CryptoHelper.generateCommonSecretKey(
-                                currentUser!!.privateKey as PrivateKey?,
-                                otherPublicKey as PublicKey?
-                            )
-
-                             */
 
                             //TODO: Fix the home page activity, so the decrypted message is shown
 
                             val encodedMessage = chatData["lastMessage"] as String?
                             //val decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, secretKey)
 
+                            val sharedPrefHandler = SharedPreferencesHandler(this);
+                            val sessionKey = sharedPrefHandler.getLatestChatKey(doc.id);
+
+                            //decrypt the message with
+                            var decryptedMessage = ""
+                            if(sessionKey != null){
+                                decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, sessionKey)
+                            }
+                            else{
+                                decryptedMessage = encodedMessage as String
+                            }
+
                             val chat = Chat(doc.id,
                                 chatData["lastUsername"] as String?,
-                                encodedMessage, //decryptedMessage,
+                                decryptedMessage, //encodedMessage
                                 chatData["lastMessageTime"] as Timestamp?,
                                 chatData["otherUserId"] as String?,
                                 chatData["otherUserUsername"] as String?)

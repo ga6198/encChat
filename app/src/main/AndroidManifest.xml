@@ -11,7 +11,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity android:name=".activities.ProfileActivity"></activity>
-        <activity android:name=".activities.ChatActivity" />
+        <activity android:name=".activities.ChatActivity" android:windowSoftInputMode="adjustPan" />
         <activity android:name=".activities.RegistrationActivity" />
         <activity android:name=".activities.HomePageActivity" />
         <activity android:name=".MainActivity">
