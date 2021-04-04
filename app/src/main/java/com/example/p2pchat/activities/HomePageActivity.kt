@@ -12,6 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import android.util.Log
 import android.widget.AbsListView
 import android.widget.ListView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.p2pchat.adapters.ChatListArrayAdapter
 import com.example.p2pchat.adapters.NavigationBar
 import com.example.p2pchat.objects.Chat
@@ -92,7 +93,29 @@ class HomePageActivity : AppCompatActivity() {
 
         }
 
+        //pull page to refresh chats
+        setUpPullToRefresh(chatArrayAdapter)
+
         //load the user's existing chats
+        loadChats(chatArrayAdapter)
+
+        //set onclicks
+        onClick()
+    }
+
+    private fun setUpPullToRefresh(chatArrayAdapter: ChatListArrayAdapter){
+        val pullToRefresh = findViewById<SwipeRefreshLayout>(R.id.pullToRefresh)
+        pullToRefresh.setOnRefreshListener {
+            //refresh data
+            chatArrayAdapter.clear()
+            loadChats(chatArrayAdapter)
+
+            pullToRefresh.isRefreshing = false
+        }
+
+    }
+
+    private fun loadChats(chatArrayAdapter: ChatListArrayAdapter){
         val db = FirebaseFirestore.getInstance()
         val chatsRef = db.collection("chats")
         val usersChatsRef = db.collection("users").document(currentUser?.id.toString()).collection("usersChats")
@@ -164,9 +187,6 @@ class HomePageActivity : AppCompatActivity() {
                     Log.w("HomePageActivity.kt", "Chat retrieval failed", task.exception)
                 }
             }
-
-        //set onclicks
-        onClick()
     }
 
     fun onClick(){

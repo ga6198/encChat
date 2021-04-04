@@ -100,4 +100,8 @@ public class ChatListArrayAdapter extends ArrayAdapter<Chat> {
 
         return row;
     }
+
+    public void clear(){
+        this.chatList.clear();
+    }
 }
