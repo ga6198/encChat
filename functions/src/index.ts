@@ -9,6 +9,8 @@ import * as admin from "firebase-admin";
 //   response.send("Hello from Firebase!"); //sends back to the client
 // });
 
+admin.initializeApp();
+
 export const notificationForChallenge = functions.firestore
     .document("/challenges/{id}")
     .onCreate(async snapshot => {

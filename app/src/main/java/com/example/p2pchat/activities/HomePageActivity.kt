@@ -66,17 +66,25 @@ class HomePageActivity : AppCompatActivity() {
             db.collection("users").document(clickedChat.otherUserId).get().addOnCompleteListener{task->
                 if(task.isSuccessful()){
                     val otherUserData = task.result
-                    val otherUser = User()
-                    if (otherUserData != null) {
-                        otherUser.id = otherUserData.id
-                    }
-                    otherUser.username = otherUserData?.get("username") as String?
-                    val publicKeyString = otherUserData?.get("publicKey") as String?
-                    otherUser.publicKey = CryptoHelper.decodeKey(
-                        publicKeyString,
+
+                    val otherUserId = otherUserData?.id
+                    val otherUserUsername = otherUserData?.get("username") as String?
+                    val otherUserPublicKeyString = otherUserData?.get("publicKey") as String?
+                    val otherUserPublicKey = CryptoHelper.decodeKey(
+                        otherUserPublicKeyString,
                         KeyType.PUBLIC,
                         Constants.identityKeyAlg
                     )
+                    val otherUserSignedPublicKeyString = otherUserData?.get("signedPrekeyPublic").toString()
+                    val otherUserSignedPublicKey = CryptoHelper.decodeKey(
+                        otherUserSignedPublicKeyString,
+                        KeyType.PUBLIC,
+                        Constants.signedPrekeyAlg
+                    )
+                    val otherUserDeviceToken = otherUserData?.get("deviceToken").toString()
+
+                    val otherUser = User(otherUserId, otherUserUsername, otherUserPublicKey, otherUserSignedPublicKey, otherUserDeviceToken)
+
 
                     //open the chat
                     if(currentUser != null) {
@@ -139,7 +147,7 @@ class HomePageActivity : AppCompatActivity() {
                                 Constants.identityKeyAlg
                             )
 
-                            //TODO: Fix the home page activity, so the decrypted message is shown
+                            //Decrypt the chat preview
 
                             val encodedMessage = chatData["lastMessage"] as String?
                             //val decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, secretKey)
@@ -270,14 +278,14 @@ class HomePageActivity : AppCompatActivity() {
                             KeyType.PUBLIC,
                             Constants.identityKeyAlg
                         )
+                        val userSignedPublicKeyEncoded = userData.get("signedPrekeyPublic").toString()
+                        val userSignedPublicKey = CryptoHelper.decodeKey(userSignedPublicKeyEncoded, KeyType.PUBLIC, Constants.signedPrekeyAlg)
+                        val userDeviceToken = userData.get("deviceToken").toString()
 
-                        val user = User()
-                        user.id = document.id
-                        user.username = username
-                        user.publicKey = userPublicKey
+                        val otherUser = User(document.id, username, userPublicKey, userSignedPublicKey, userDeviceToken)
 
                         //open the alert dialog
-                        openConfirmUserDialog(user)
+                        openConfirmUserDialog(otherUser)
                     }
                 }
                 else{
@@ -286,22 +294,21 @@ class HomePageActivity : AppCompatActivity() {
             }
     }
 
-    fun openConfirmUserDialog(user: User){
+    fun openConfirmUserDialog(otherUser: User){
         val builder = AlertDialog.Builder(this)
 
         val inflater = this.layoutInflater
         val view = inflater.inflate(R.layout.activity_confirm_user_dialog, null)
 
-        println(user.username)
-        println(user.publicKey.toString())
+        println(otherUser.username)
 
         //change the view values
         val usernameDisplay = view.findViewById<TextView>(R.id.usernameText)
-        usernameDisplay?.setText(user.username)
+        usernameDisplay?.setText(otherUser.username)
 
         //show public key
         val publicKeyDisplay = view.findViewById<TextView>(R.id.publicKeyText)
-        publicKeyDisplay?.setText(user.encodedPublicKey) //publicKeyDisplay?.setText(user.publicKey.toString())
+        publicKeyDisplay?.setText(otherUser.encodedPublicKey) //publicKeyDisplay?.setText(user.publicKey.toString())
 
         builder.setView(view)
         builder.setTitle("Confirm User")
@@ -314,7 +321,7 @@ class HomePageActivity : AppCompatActivity() {
             // follow the process on your proposal (start by getting the other user's keys)
 
             //for now, just directly opening a chat
-            currentUser?.let { createChat(it, user) }
+            currentUser?.let { createChat(it, otherUser) }
         }
 
         builder.show()

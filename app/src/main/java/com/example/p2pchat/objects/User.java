@@ -63,6 +63,15 @@ public class User implements Parcelable {
         setRegenerated(false);
     }
 
+    public User(String id, String username, Key publicKey, Key signedPrekeyPublic, String deviceToken){
+        setId(id);
+        setUsername(username);
+        setPublicKey(publicKey);
+        setSignedPrekeyPublic(signedPrekeyPublic);
+        setDeviceToken(deviceToken);
+        setRegenerated(false);
+    }
+
     // 99.9% of the time you can just ignore this
     @Override
     public int describeContents() {
