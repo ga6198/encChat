@@ -14,5 +14,6 @@ public class Constants {
     static public final String SERVER_KEY = "AAAAZZ7okxg:APA91bHgScFcQ3HxNna6W9TgQm3flA8uYHpS_VszRDor3kfNq6RVYkYBt3mtu-QvBPLR58L8cxT-AORcXt2F5UNqMqOUAeSu9WvIW07Wt2juhJfvBnk1dsU4a_LqzOs3ihFxTajG4g6N";
     static public final String CONTENT_TYPE = "application/json";
 
+    static public final String CHANNEL_ID = "notifications";
 }
 

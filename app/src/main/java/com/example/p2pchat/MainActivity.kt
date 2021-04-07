@@ -24,6 +24,12 @@ import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.messaging.FirebaseMessaging
 import java.security.Key
 import java.util.*
+import android.app.NotificationManager
+import android.app.NotificationChannel
+import androidx.core.app.ComponentActivity.ExtraData
+import androidx.core.content.ContextCompat.getSystemService
+import android.icu.lang.UCharacter.GraphemeClusterBreak.T
+import com.example.p2pchat.utils.Constants
 
 
 class MainActivity : AppCompatActivity() {
@@ -31,6 +37,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        //initialize notifications
+        createNotificationChannel()
 
         //set initial firebase settings
         //stop deleted documents from caching
@@ -44,6 +53,25 @@ class MainActivity : AppCompatActivity() {
 
         //set onclicks
         //onClick()
+    }
+
+    private fun createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = getString(R.string.channel_name)
+            val description = getString(R.string.channel_description)
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(
+                Constants.CHANNEL_ID, name,
+                importance
+            )
+            channel.description = description
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviours after this
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager!!.createNotificationChannel(channel)
+        }
     }
 
     //check if user is already logged in

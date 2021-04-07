@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import com.example.p2pchat.R;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -64,13 +65,17 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         sendNotification(notification, data);
     }
 
-    /**
+    /**3
      * The function that actually builds and sends the notification
      * @param notification
      * @param data
      */
     private void sendNotification(RemoteMessage.Notification notification, Map<String, String> data){
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "challenges");
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, Constants.CHANNEL_ID)
+                .setContentTitle(notification.getTitle())
+                .setContentText(notification.getBody())
+                .setSmallIcon(R.drawable.ic_action_chats);
+                //.addAction(acceptAction)
 
         NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(0, notificationBuilder.build());

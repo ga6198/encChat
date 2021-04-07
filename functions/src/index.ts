@@ -18,10 +18,18 @@ export const notificationForChallenge = functions.firestore
       // send a notification to the chat receiver
       const payload: admin.messaging.MessagingPayload = {
         notification: {
-        title: `Push Sent From ${challenge.senderUsername}`,
-        body: `Press 'accept' to approve`
-        }
+          title: `Push Sent From ${challenge.senderUsername}`,
+          body: `Press 'accept' to approve`,
+		  click_action: `android.intent.action.MAIN`
+        },
         //add data
+		data: {
+		  approved: `true`,
+		  otherUserId: challenge.senderId,
+		  otherUserDeviceToken: challenge.senderDeviceToken,
+		  otherUserUsername: challenge.senderUsername,
+		  chatId: challenge.chatId
+		}
         }
       return admin.messaging().sendToDevice(challenge.receiverDeviceToken, payload);
       });
