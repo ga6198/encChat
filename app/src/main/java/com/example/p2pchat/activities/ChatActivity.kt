@@ -152,6 +152,7 @@ class ChatActivity : AppCompatActivity() {
                             Log.d("loadSessionKeys()", "Certain session key decryptions skipped")
                         }
                     }
+                    //otherwise, the key existed in sharedPreferences, so add it to the array
                     else{
                         val sessionKey = SessionKey(chat.id, currentSessionKey, timeCreated)
                         if(!sessionKeys.contains(sessionKey)) {

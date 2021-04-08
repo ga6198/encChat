@@ -1,6 +1,7 @@
-package com.example.p2pchat.utils;
+package com.example.p2pchat.services;
 
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -12,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import com.example.p2pchat.R;
+import com.example.p2pchat.utils.Constants;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -31,6 +33,11 @@ import java.util.Map;
  */
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
+    //for accepting push challenges
+    public static final String NOTIFICATION_REPLY = "notificationReply";
+    public static final int REQUEST_CODE_APPROVE = 101;
+    public static final String KEY_INTENT_APPROVE = "keyIntentAccept";
+
 
     /**
      * When receiving a token, write it to the database?
@@ -62,7 +69,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         super.onMessageReceived(remoteMessage);
         RemoteMessage.Notification notification = remoteMessage.getNotification();
         Map<String, String> data = remoteMessage.getData();
-        sendNotification(notification, data);
+
+        //for push challenge notifications
+        if(data.get("approved").equals("true")){
+            sendNotification(notification, data);
+        }
     }
 
     /**3
@@ -71,11 +82,27 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      * @param data
      */
     private void sendNotification(RemoteMessage.Notification notification, Map<String, String> data){
+        //Pending intent for push challenge approval
+        PendingIntent acceptPendingIntent = PendingIntent.getBroadcast(
+                this,
+                    REQUEST_CODE_APPROVE,
+                new Intent(this, NotificationReceiver.class)
+                        .putExtra(KEY_INTENT_APPROVE, REQUEST_CODE_APPROVE),
+                PendingIntent.FLAG_UPDATE_CURRENT
+        );
+
+        //action to approve the push challenge
+        NotificationCompat.Action acceptAction =
+                new NotificationCompat.Action.Builder(R.id.action_chats,
+                        "Accept", acceptPendingIntent)
+        //.addRemoteInput(remoteInput)
+                .build();
+
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, Constants.CHANNEL_ID)
                 .setContentTitle(notification.getTitle())
                 .setContentText(notification.getBody())
-                .setSmallIcon(R.drawable.ic_action_chats);
-                //.addAction(acceptAction)
+                .setSmallIcon(R.drawable.ic_action_chats)
+                .addAction(acceptAction);
 
         NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(0, notificationBuilder.build());

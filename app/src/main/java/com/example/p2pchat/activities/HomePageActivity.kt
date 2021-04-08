@@ -153,12 +153,20 @@ class HomePageActivity : AppCompatActivity() {
                             //val decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, secretKey)
 
                             val sharedPrefHandler = SharedPreferencesHandler(this);
-                            val sessionKey = sharedPrefHandler.getLatestChatKey(doc.id);
+
+                            //use the last message time to get the correct chat key. Should NOT necessarily be the latest
+                            //val sessionKey = sharedPrefHandler.getLatestChatKey(doc.id);
+                            val sessionKey = sharedPrefHandler.getCorrespondingChatKey(doc.id, chatData["lastMessageTime"] as Timestamp?)
 
                             //decrypt the message with
                             var decryptedMessage = ""
                             if(sessionKey != null){
-                                decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, sessionKey)
+                                try{
+                                    decryptedMessage = CryptoHelper.decryptMessage(encodedMessage, sessionKey)
+                                }
+                                catch (e: Exception){
+                                    decryptedMessage = encodedMessage as String
+                                }
                             }
                             else{
                                 decryptedMessage = encodedMessage as String
@@ -457,11 +465,12 @@ class HomePageActivity : AppCompatActivity() {
                     val encryptedSessionKey = CryptoHelper.encryptSessionKey(sessionKey, otherUser.publicKey as PublicKey) //CryptoHelper.generateEncryptedSessionKey(otherUser.publicKey as PublicKey)
 
                     val sessionKeyRef = sessionKeysRef.document() //auto-generated id
+                    val newKeyUploadTime = Timestamp.now()
                     val sessionKeyData = hashMapOf(
                         "sessionKey" to encryptedSessionKey,
                         "uploader" to currentUser.id,
                         "decrypter" to otherUser.id, //the person who will use his private key to decrypt the session key
-                        "timeCreated" to timeCreated
+                        "timeCreated" to newKeyUploadTime
                     )
 
                     //save the new session key
@@ -471,7 +480,7 @@ class HomePageActivity : AppCompatActivity() {
 
                         //save the session key to sharedPreferences
                         val sharedPrefHandler = SharedPreferencesHandler(this)
-                        sharedPrefHandler.saveSessionKey(chatId, timeCreated, sessionKey)
+                        sharedPrefHandler.saveSessionKey(chatId, newKeyUploadTime, sessionKey)
                     }.addOnSuccessListener {
                         openChat(currentUser, otherUser, chatId)
                     }

@@ -31,8 +31,8 @@ public class SessionKey {
         Timestamp currentTime = Timestamp.now();
         long keyDuration = currentTime.getSeconds() - this.timeCreated.getSeconds();
 
-        long days = 7; //set to expire after seven days
-        long daysInSeconds = days * 24 * 60 * 60;
+        double days = 7; //1.0/360.0; is 4 minutes //set to 2 minutes (1/720) for testing  //7; //set to expire after seven days
+        double daysInSeconds = days * 24 * 60 * 60;
 
         if(keyDuration > daysInSeconds){
             return true;

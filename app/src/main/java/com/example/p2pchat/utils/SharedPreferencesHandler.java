@@ -19,7 +19,9 @@ import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.crypto.BadPaddingException;
@@ -293,6 +295,101 @@ public class SharedPreferencesHandler {
         }
 
         return null;
+    }
+
+    /**
+     * Searches shared preferences for a the correct session key based on the message time
+     * @param chatId
+     * @param messageTime
+     */
+    public byte[] getCorrespondingChatKey(String chatId, Timestamp messageTime){
+        Map<String, ?> allEntries = sharedPref.getAll();
+
+        //get all the keys for the specific chat
+        HashMap<String, String> chatKeys = new HashMap<String, String>();
+        for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
+            //if the key is for the chatid, get it
+            String keyId = entry.getKey();
+            if(keyId.contains(chatId)){
+                String encodedKey = (String)entry.getValue();
+
+                //add the key and encodedKey to the keys map
+                chatKeys.put(keyId, encodedKey);
+            }
+        }
+
+        //sort the hashmap, with oldest keys first
+        List<String> keyIds = new ArrayList(chatKeys.keySet());
+        Collections.sort(keyIds);
+
+        // get the correct key
+        // if only one key, use it
+        for (int i = keyIds.size() - 1; i >= 0; i--){
+            String keyId = keyIds.get(i);
+
+            //extract the timestamp from the key
+            String timeInSecondsStr = keyId.substring(keyId.lastIndexOf("_") + 1);
+            int keyCreationTimeInSeconds = Integer.parseInt(timeInSecondsStr);
+
+            //If message timestamp higher than the key timestamp, use it
+            if(messageTime.getSeconds() >= keyCreationTimeInSeconds){
+                String encodedSessionKey = chatKeys.get(keyId);
+                if (!encodedSessionKey.equals("")) {
+                    byte[] sessionKey = Base64.decode(encodedSessionKey, Base64.DEFAULT);
+                    return sessionKey;
+                }
+                else{
+                    return null;
+                }
+            }
+        }
+        return null;
+
+        /*
+        if(keyIds.size() == 1){
+            String keyId = keyIds.get(0);
+            String encodedSessionKey = chatKeys.get(keyId);
+            if (!encodedSessionKey.equals("")) {
+                byte[] sessionKey = Base64.decode(encodedSessionKey, Base64.DEFAULT);
+                return sessionKey;
+            }
+        }
+        // otherwise, if there are multiple keys, loop through
+        else if (keyIds.size() > 1) {
+            for (int i = 1; i < keyIds.size(); i++) {
+                String keyId = keyIds.get(i);
+
+                //extract the timestamp from the key
+                String timeInSecondsStr = keyId.substring(keyId.lastIndexOf("_") + 1);
+                int keyCreationTimeInSeconds = Integer.parseInt(timeInSecondsStr);
+
+                //if the messageTime is less than the time the current key was created, use the previous key
+                if (messageTime.getSeconds() < keyCreationTimeInSeconds) {
+                    String previousKeyId = keyIds.get(i - 1);
+
+                    String encodedSessionKey = chatKeys.get(previousKeyId);
+                    if (!encodedSessionKey.equals("")) {
+                        byte[] sessionKey = Base64.decode(encodedSessionKey, Base64.DEFAULT);
+                        return sessionKey;
+                    } else {
+                        return null;
+                    }
+                }
+            }
+            //if it's the last key, and no key was returned prior, use it
+            String lastKeyId = keyIds.get(keyIds.size() - 1);
+            String encodedSessionKey = chatKeys.get(lastKeyId);
+            if (!encodedSessionKey.equals("")) {
+                byte[] sessionKey = Base64.decode(encodedSessionKey, Base64.DEFAULT);
+                return sessionKey;
+            } else {
+                return null;
+            }
+        }
+
+        return null;
+
+         */
     }
 
     public void setContext(Context context) {
