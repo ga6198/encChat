@@ -12,8 +12,8 @@ import * as admin from "firebase-admin";
 admin.initializeApp();
 
 export const notificationForChallenge = functions.firestore
-    .document("/challenges/{id}")
-    .onCreate(async snapshot => {
+    .document("/challenges/{challengeId}")
+    .onCreate(async (snapshot, context) => {
       const challenge = snapshot.data();
       // send a notification to the chat receiver
       const payload: admin.messaging.MessagingPayload = {
@@ -24,6 +24,7 @@ export const notificationForChallenge = functions.firestore
         },
         //add data
 		data: {
+		  challengeId: context.params.challengeId,
 		  approved: `true`,
 		  otherUserId: challenge.senderId,
 		  otherUserDeviceToken: challenge.senderDeviceToken,
@@ -33,3 +34,24 @@ export const notificationForChallenge = functions.firestore
         }
       return admin.messaging().sendToDevice(challenge.receiverDeviceToken, payload);
       });
+	  
+export const notificationForChallengeResponse = functions.firestore
+    .document("/challenges/{challengeId}")
+    .onUpdate(async (change, context) => {
+      const challenge = change.after.data();
+      // send a notification to the original challenge sender
+	  if(challenge.approved == true){
+		  const payload: admin.messaging.MessagingPayload = {
+			notification: {
+			  title: `Push challenge approved`,
+			  body: `${challenge.receiverUsername} responded to your push`,
+			  click_action: `android.intent.action.MAIN`
+			},
+		    data:{
+			  challengeResponse: `true`
+		    }
+			}
+		  return admin.messaging().sendToDevice(challenge.senderDeviceToken, payload);
+      }
+	  return null;
+	  });

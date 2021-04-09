@@ -18,6 +18,8 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -33,10 +35,6 @@ import java.util.Map;
  */
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
-    //for accepting push challenges
-    public static final String NOTIFICATION_REPLY = "notificationReply";
-    public static final int REQUEST_CODE_APPROVE = 101;
-    public static final String KEY_INTENT_APPROVE = "keyIntentAccept";
 
 
     /**
@@ -71,23 +69,33 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Map<String, String> data = remoteMessage.getData();
 
         //for push challenge notifications
-        if(data.get("approved").equals("true")){
-            sendNotification(notification, data);
+        if("true".equals(data.get("approved"))){
+            sendChallengeNotification(notification, data);
+        }
+
+        //for push challenge response notifications
+        if("true".equals(data.get("challengeResponse"))){
+            sendChallengeResponseNotification(notification, data);
         }
     }
 
-    /**3
+    /**
      * The function that actually builds and sends the notification
      * @param notification
      * @param data
      */
-    private void sendNotification(RemoteMessage.Notification notification, Map<String, String> data){
+    private void sendChallengeNotification(RemoteMessage.Notification notification, Map<String, String> data){
+        //generate a notification id
+        int notifId = createNotifId();
+
         //Pending intent for push challenge approval
         PendingIntent acceptPendingIntent = PendingIntent.getBroadcast(
                 this,
-                    REQUEST_CODE_APPROVE,
+                    Constants.REQUEST_CODE_APPROVE,
                 new Intent(this, NotificationReceiver.class)
-                        .putExtra(KEY_INTENT_APPROVE, REQUEST_CODE_APPROVE),
+                        .putExtra(Constants.KEY_INTENT_APPROVE, Constants.REQUEST_CODE_APPROVE)
+                        .putExtra("notificationId", notifId)
+                        .putExtra("challengeId", data.get("challengeId")),
                 PendingIntent.FLAG_UPDATE_CURRENT
         );
 
@@ -105,6 +113,34 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .addAction(acceptAction);
 
         NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(0, notificationBuilder.build());
+        notificationManager.notify(notifId, notificationBuilder.build());
+    }
+
+    /**
+     * The function that shows notifications once a challenge was approved inside the application
+     * @param notification
+     * @param data
+     */
+    private void sendChallengeResponseNotification(RemoteMessage.Notification notification, Map<String, String> data){
+        //generate a notification id
+        int notifId = createNotifId();
+
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, Constants.CHANNEL_ID)
+                .setContentTitle(notification.getTitle())
+                .setContentText(notification.getBody())
+                .setSmallIcon(R.drawable.ic_action_chats);
+
+        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(notifId, notificationBuilder.build());
+    }
+
+    /**
+     * Generate a notification id based on the timestamp
+     * @return
+     */
+    private int createNotifId(){
+        Date now = new Date();
+        int id = Integer.parseInt(new SimpleDateFormat("ddHHmmss").format(now));
+        return id;
     }
 }

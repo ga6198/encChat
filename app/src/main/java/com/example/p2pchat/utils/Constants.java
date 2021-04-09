@@ -15,5 +15,10 @@ public class Constants {
     static public final String CONTENT_TYPE = "application/json";
 
     static public final String CHANNEL_ID = "notifications";
+
+    //for accepting push challenges
+    public static final String NOTIFICATION_REPLY = "notificationReply";
+    public static final int REQUEST_CODE_APPROVE = 101;
+    public static final String KEY_INTENT_APPROVE = "keyIntentAccept";
 }
 
