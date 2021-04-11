@@ -167,6 +167,9 @@ class MainActivity : AppCompatActivity() {
             userWithToken.deviceToken = token
 
             loginUser(currentUser)
+        }.addOnFailureListener {exception ->
+            Log.e("Firebase token", "Token not properly retrieved")
+            exception.printStackTrace()
         }
     }
 

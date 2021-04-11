@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/linearLayout3"
@@ -12,21 +12,27 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout"
-        android:layout_width="match_parent"
-        android:layout_height="62dp">
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_conversion_absoluteHeight="62dp"
+        tools:layout_conversion_absoluteWidth="411dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/chatToolbar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
             android:background="?attr/colorPrimary"
             android:minHeight="?attr/actionBarSize"
             android:theme="?attr/actionBarTheme"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            tools:layout_conversion_absoluteHeight="56dp"
+            tools:layout_conversion_absoluteWidth="411dp" />
 
         <TextView
             android:id="@+id/usernameText"
@@ -37,7 +43,11 @@
             app:layout_constraintBottom_toBottomOf="@+id/chatToolbar"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@+id/chatToolbar"
-            app:layout_constraintTop_toTopOf="@+id/chatToolbar" />
+            app:layout_constraintTop_toTopOf="@+id/chatToolbar"
+            tools:layout_conversion_absoluteHeight="24dp"
+            tools:layout_conversion_absoluteWidth="74dp"
+            tools:layout_editor_absoluteX="169dp"
+            tools:layout_editor_absoluteY="16dp" />
 
         <ImageButton
             android:id="@+id/challengeButton"
@@ -47,28 +57,41 @@
             android:background="@drawable/baseline_connect_without_contact_24"
             app:layout_constraintBottom_toBottomOf="@+id/chatToolbar"
             app:layout_constraintEnd_toEndOf="@+id/chatToolbar"
-            app:layout_constraintTop_toTopOf="@+id/chatToolbar" />
+            app:layout_constraintTop_toTopOf="@+id/chatToolbar"
+            tools:layout_conversion_absoluteHeight="24dp"
+            tools:layout_conversion_absoluteWidth="24dp" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ListView
         android:id="@+id/messages_view"
         android:layout_width="wrap_content"
-        android:layout_height="632dp"
-        android:divider="#fff">
+        android:layout_height="0dp"
+        android:divider="#fff"
+        android:stackFromBottom="true"
+        app:layout_constraintBottom_toTopOf="@+id/barLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/constraintLayout"
+        tools:layout_conversion_absoluteHeight="669dp"
+        tools:layout_conversion_absoluteWidth="411dp">
 
     </ListView>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/barLayout"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#fff">
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="#fff"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_conversion_absoluteHeight="0dp"
+        tools:layout_conversion_absoluteWidth="411dp">
 
         <EditText
             android:id="@+id/sendText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
             android:ems="10"
             android:hint="Write a message"
             android:inputType="text"
@@ -78,22 +101,25 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/sendButton"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            tools:layout_conversion_absoluteHeight="0dp"
+            tools:layout_conversion_absoluteWidth="351dp" />
 
         <ImageButton
             android:id="@+id/sendButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
             android:background="@drawable/ic_send_black_24dp"
             android:padding="20dp"
             android:scaleType="fitCenter"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/sendText"
-            app:layout_constraintTop_toTopOf="@+id/sendText" />
+            app:layout_constraintTop_toTopOf="@+id/sendText"
+            tools:layout_conversion_absoluteHeight="0dp"
+            tools:layout_conversion_absoluteWidth="40dp" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
 
