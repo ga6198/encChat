@@ -29,6 +29,9 @@ import android.app.NotificationChannel
 import androidx.core.app.ComponentActivity.ExtraData
 import androidx.core.content.ContextCompat.getSystemService
 import android.icu.lang.UCharacter.GraphemeClusterBreak.T
+import android.view.View
+import android.widget.ProgressBar
+import androidx.appcompat.app.AlertDialog
 import com.example.p2pchat.utils.Constants
 
 
@@ -109,7 +112,64 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        setupForgotPassword()
+
         setupLogin()
+    }
+
+    /**
+     * sends a password reset email
+     */
+    private fun setupForgotPassword(){
+        val forgotPasswordButton = findViewById<TextView>(R.id.forgotPassword)
+        forgotPasswordButton.setOnClickListener{
+            val builder = AlertDialog.Builder(this)
+
+            val inflater = this.layoutInflater
+            val view = inflater.inflate(R.layout.activity_add_user_dialog, null)
+
+            //change the view header
+            val promptDisplay = view.findViewById<TextView>(R.id.textView)
+            promptDisplay?.setText("Enter your email")
+
+            builder.setView(view)
+            builder.setTitle("Reset Password")
+            builder.setNegativeButton("Cancel"){dialog, which->
+                //automatically closes dialog
+            }
+
+            builder.setPositiveButton("Confirm") { dialog, which ->
+                //note how we specifically specified "view"
+                val usernameText = view.findViewById<TextView>(R.id.usernameText)
+                val usernameInput = usernameText.text.toString()
+
+                val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+
+                //send password reset email to the email address
+                if(usernameInput != null && !"".equals(usernameInput)){
+                    progressBar.visibility = View.VISIBLE
+
+                    val auth = FirebaseAuth.getInstance()
+                    auth.sendPasswordResetEmail(usernameInput)
+                        .addOnCompleteListener{task->
+                            if(task.isSuccessful){
+                                Toast.makeText(this, "Password reset email sent", Toast.LENGTH_SHORT).show();
+                            }
+
+                            else{
+                                Toast.makeText(this, "Failed to send reset email", Toast.LENGTH_SHORT).show();
+                            }
+
+                            progressBar.visibility = View.GONE
+                        }
+                }
+                else{
+                    Toast.makeText(getApplication(), "Enter your email", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            builder.show()
+        }
     }
 
     fun setupLogin(){
@@ -131,6 +191,9 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Please enter your password", Toast.LENGTH_SHORT).show()
             }
             else{
+                val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+                progressBar.visibility = View.VISIBLE
+
                 val mAuth = FirebaseAuth.getInstance();
                 mAuth.signInWithEmailAndPassword(usernameInput, passwordInput).addOnCompleteListener {
                     if(it.isSuccessful()){
@@ -149,6 +212,8 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show()
 
                     }
+
+                    progressBar.visibility = View.GONE
                 }
             }
 
@@ -168,6 +233,7 @@ class MainActivity : AppCompatActivity() {
 
             loginUser(currentUser)
         }.addOnFailureListener {exception ->
+            Toast.makeText(this, "Device token not retrieved", Toast.LENGTH_SHORT).show()
             Log.e("Firebase token", "Token not properly retrieved")
             exception.printStackTrace()
         }
@@ -180,6 +246,48 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(this, HomePageActivity::class.java)
 
         //if the user is using a new device, need to create new public and private keys
+        val db =  FirebaseFirestore.getInstance()
+        db.collection("users").document(currentUser.id).get()
+            .addOnSuccessListener {snap->
+                val dbDeviceToken = snap.data?.get("deviceToken") as String?
+
+                //not using a new device, since the tokens match
+                if(currentUser.deviceToken.equals(dbDeviceToken)){
+                    //directly go to next page
+                    intent.putExtra("user", currentUser)
+                    startActivity(intent)
+                }
+                //using a new device, since the tokens do not match
+                else{
+                    //val db = FirebaseFirestore.getInstance()
+                    //user new key data
+                    val userData = hashMapOf<String, Any>(
+                        "publicKey" to currentUser.encodedPublicKey,
+                        "signedPrekeyPublic" to currentUser.encodedSignedPrekeyPublic,
+                        "deviceToken" to currentUser.deviceToken //new device means new device token as well
+                    )
+                    val userRef = db.collection("users").document(currentUser.id)
+
+                    db.runTransaction{transaction ->
+                        //recreate pub-prv keys
+                        currentUser = regenerateUser(currentUser)
+
+                        //upload to the new keys to the database
+                        transaction.update(userRef, userData)
+                    }.addOnSuccessListener{
+                        //go to the next page
+                        intent.putExtra("user", currentUser)
+                        startActivity(intent)
+                    }.addOnFailureListener{
+                        Log.d("Regenerating user", "failed")
+                    }
+                }
+            }.addOnFailureListener{exception ->
+                Toast.makeText(this, "Device token not retrieved from database", Toast.LENGTH_SHORT).show()
+                Log.e("Firebase token", "Token not properly retrieved from database")
+                exception.printStackTrace()
+            }
+        /*
         if(usingNewDevice(currentUser)){
             val db = FirebaseFirestore.getInstance()
             //user new key data
@@ -200,18 +308,20 @@ class MainActivity : AppCompatActivity() {
                 //go to the next page
                 intent.putExtra("user", currentUser)
                 startActivity(intent)
+            }.addOnFailureListener{
+                Log.d("Regenerating user", "failed")
             }
-                .addOnFailureListener{
-                    Log.d("Regenerating user", "failed")
-                }
         }
         //otherwise, if not using a new device, go directly to the next page
         else{
             intent.putExtra("user", currentUser)
             startActivity(intent)
         }
+
+         */
     }
 
+    //TODO: modify this to check the device token in the db instead
     //check if the user is logging in from a new device (public keys, private keys should be null)
     fun usingNewDevice(user: User): Boolean{
         if (user.publicKey == null && user.signedPrekeyPublic == null){
