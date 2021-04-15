@@ -27,7 +27,6 @@ public class RSAAlg implements CryptoAlg {
 
     /**
      * set up RSA encryption/decryption using a public and private key. They are NOT a key pair
-     * @param publicKey - If encrypting, pass in the receiver's public key. If decrypting, pass in the sender's public key
      * @param privateKey - If encrypting, pass in the sender's public key. If decrypting, pass in the receiver's public key
      */
     /*

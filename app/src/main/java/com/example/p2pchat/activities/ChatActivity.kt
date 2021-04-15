@@ -21,6 +21,7 @@ import com.google.firebase.firestore.Query
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.sql.Time
+import java.util.*
 
 
 class ChatActivity : AppCompatActivity() {
@@ -304,7 +305,11 @@ class ChatActivity : AppCompatActivity() {
             "time" to currentTime,
             "message" to encryptedMessage,
             "senderId" to currentUser.id,
-            "senderUsername" to currentUser.username
+            "senderUsername" to currentUser.username,
+            "senderDeviceToken" to currentUser.deviceToken,
+            "receiverId" to otherUser.id,
+            "receiverUsername" to otherUser.username,
+            "receiverDeviceToken" to otherUser.deviceToken
         )
 
         //create another map with the same data for saving to the usersChats collection
@@ -374,6 +379,14 @@ class ChatActivity : AppCompatActivity() {
         val db = FirebaseFirestore.getInstance()
         val challengeRef = db.collection("challenges").document() //new document
 
+        val rand = Random()
+        //random values from 0.0-1.0
+        val challenge = rand.nextDouble()
+        val challengeString = java.lang.Double.toString(challenge)
+        val challengeValue = CryptoHelper.encryptMessage(challengeString, sessionKeys.last().sessionKey)
+        //val challengeValue = CryptoHelper.encryptChallenge(challengeString, otherUser.publicKey as PublicKey)
+        //val challengeValue = CryptoHelper.createChallengeNumber(otherUser.publicKey as PublicKey)
+
         val challengeData = hashMapOf<String, Any>(
             "time" to Timestamp.now(),
             "chatId" to chat.id,
@@ -382,7 +395,8 @@ class ChatActivity : AppCompatActivity() {
             "senderDeviceToken" to currentUser.deviceToken,
             "receiverId" to otherUser.id,
             "receiverUsername" to otherUser.username,
-            "receiverDeviceToken" to otherUser.deviceToken
+            "receiverDeviceToken" to otherUser.deviceToken,
+            "challenge" to challengeValue
         )
 
         //upload the data
@@ -396,6 +410,10 @@ class ChatActivity : AppCompatActivity() {
 
             builder.show()
         }
+
+        //save the challenge value to SharedPreferences
+        val sharedPrefsHandler = SharedPreferencesHandler(this)
+        sharedPrefsHandler.saveChallengeValue(chat.id, challengeString)
     }
 
     /*

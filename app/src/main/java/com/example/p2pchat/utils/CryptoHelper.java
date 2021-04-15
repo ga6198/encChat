@@ -14,6 +14,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.List;
+import java.util.Random;
 
 import com.google.firebase.Timestamp;
 
@@ -242,6 +243,95 @@ public class CryptoHelper {
         String plaintext = null;
         try {
             plaintext = secretKeyAlg.decrypt(message);
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidAlgorithmParameterException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+
+        return plaintext;
+    }
+
+    /**
+     * Creates a challenge number as a base64-encoded string
+     * @param receiverPublicKey
+     * @return
+     */
+    static public String createChallengeNumber(PublicKey receiverPublicKey){
+        Random rand = new Random();
+        //random values from 0.0-1.0
+        double challenge = rand.nextDouble();
+        String challengeString = Double.toString(challenge);
+
+        RSAAlg rsaAlg = new RSAAlg(receiverPublicKey, RSAAlg.RSAMode.CONFIDENTIALITY_MODE);
+        String encryptedChallengeString = "";
+        try {
+            byte[] encryptedChallenge = rsaAlg.encrypt(challengeString).get("ciphertext");
+            encryptedChallengeString = Base64.encodeToString(encryptedChallenge, Base64.DEFAULT);
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+
+        return encryptedChallengeString;
+    }
+
+    /**
+     *
+     * @param challenge
+     * @param publicKey
+     * @return
+     */
+    static public String encryptChallenge(String challenge, PublicKey publicKey){
+        RSAAlg rsaAlg = new RSAAlg(publicKey, RSAAlg.RSAMode.CONFIDENTIALITY_MODE);
+        String encryptedChallengeString = "";
+        try {
+            byte[] encryptedChallenge = rsaAlg.encrypt(challenge).get("ciphertext");
+            encryptedChallengeString = Base64.encodeToString(encryptedChallenge, Base64.DEFAULT);
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+
+        return encryptedChallengeString;
+    }
+
+    /**
+     * Gets back the challenge number as a string
+     * @param encodedChallenge
+     * @param privateKey
+     * @return
+     */
+    static public String decryptChallenge(String encodedChallenge, PrivateKey privateKey){
+        //base 64 decode the message
+        byte[] message = Base64.decode(encodedChallenge, Base64.DEFAULT);
+
+        RSAAlg rsaAlg = new RSAAlg(privateKey, RSAAlg.RSAMode.CONFIDENTIALITY_MODE);
+        String plaintext = null;
+        try {
+            plaintext = rsaAlg.decrypt(message);
         } catch (NoSuchPaddingException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {

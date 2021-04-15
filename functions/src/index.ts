@@ -24,12 +24,17 @@ export const notificationForChallenge = functions.firestore
         },
         //add data
 		data: {
+		  challenge: challenge.challenge, 
 		  challengeId: context.params.challengeId,
 		  approved: `true`,
-		  otherUserId: challenge.senderId,
-		  otherUserDeviceToken: challenge.senderDeviceToken,
-		  otherUserUsername: challenge.senderUsername,
-		  chatId: challenge.chatId
+		  senderId: challenge.senderId,
+		  senderDeviceToken: challenge.senderDeviceToken,
+		  senderUsername: challenge.senderUsername,
+		  receiverId: challenge.receiverId,
+		  receiverUsername: challenge.receiverUsername,
+		  receiverDeviceToken: challenge.receiverDeviceToken,
+		  chatId: challenge.chatId,
+		  time: challenge.time.seconds.toString()
 		}
         }
       return admin.messaging().sendToDevice(challenge.receiverDeviceToken, payload);
@@ -48,10 +53,35 @@ export const notificationForChallengeResponse = functions.firestore
 			  click_action: `android.intent.action.MAIN`
 			},
 		    data:{
-			  challengeResponse: `true`
-		    }
+			  challengeResponse: `true`,
+			  chatId: challenge.chatId,
+			  time: challenge.time.seconds.toString(),
+			  challengeResponseData: challenge.challengeResponseData,
+			  senderUsername: challenge.receiverUsername, //the sender of the response is the person who received the first challenge
+			  receiverId: challenge.senderId //the receiver is the person who first sent the challenge
+			}
 			}
 		  return admin.messaging().sendToDevice(challenge.senderDeviceToken, payload);
       }
 	  return null;
 	  });
+
+export const notificationForChatMessage = functions.firestore
+	.document("/chats/{chatId}/messages/{messageId}")
+	.onCreate(async (snapshot, context) => {
+	  const message = snapshot.data();
+	  
+	  //time of message
+	  //var d = new Date(message.time)
+	  //var time = d.getHours() + ":" + d.getMinutes()
+	  
+      // send a notification to the chat receiver
+	  const payload: admin.messaging.MessagingPayload = {
+        notification: {
+          title: `Message from ${message.senderUsername}`,
+          body: `Open the app to view`,
+		  click_action: `android.intent.action.MAIN`
+        },
+        }
+      return admin.messaging().sendToDevice(message.receiverDeviceToken, payload);
+	})

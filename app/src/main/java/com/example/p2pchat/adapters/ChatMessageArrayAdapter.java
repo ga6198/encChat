@@ -9,6 +9,7 @@ import android.widget.TextView;
 
 import com.example.p2pchat.R;
 import com.example.p2pchat.objects.ChatMessage;
+import com.example.p2pchat.utils.DateUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 public class ChatMessageArrayAdapter extends ArrayAdapter<ChatMessage> {
 
     private TextView chatText;
+    private TextView dateText;
     private List<ChatMessage> chatMessageList = new ArrayList<ChatMessage>();
     private Context context;
 
@@ -54,8 +56,31 @@ public class ChatMessageArrayAdapter extends ArrayAdapter<ChatMessage> {
         } else {
             row = inflater.inflate(R.layout.their_message, parent, false);
         }
+
+        //set the chat text
         chatText = (TextView) row.findViewById(R.id.message_body);
         chatText.setText(chatMessageObj.getMessage());
+
+        //set the date text
+        String dateString = DateUtils.dateStringWithTime(chatMessageObj.getTime());
+        dateText = (TextView) row.findViewById(R.id.date_text);
+        dateText.setText(dateString);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TextView date = (TextView) v.findViewById(R.id.date_text);
+                //If the date is visible, make it nonvisible
+                if(date.getVisibility() == View.VISIBLE){
+                    date.setVisibility(View.GONE);
+                }
+                //if the date is not visible, make it visible
+                else{
+                    date.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
         return row;
     }
 }

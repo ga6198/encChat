@@ -14,24 +14,34 @@ import androidx.core.app.NotificationCompat;
 
 import com.example.p2pchat.R;
 import com.example.p2pchat.utils.Constants;
+import com.example.p2pchat.utils.CryptoHelper;
+import com.example.p2pchat.utils.SharedPreferencesHandler;
+import com.google.firebase.Timestamp;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.UnrecoverableEntryException;
+import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 /**
  * NOTE: There can only be one service in each app that receives FCM messages. If multiple
  * are declared in the Manifest then the first one will be chosen.
  *
- * In order to make this Java sample functional, you must remove the following from the Kotlin messaging
- * service in the AndroidManifest.xml:
- *
- * <intent-filter>
- *   <action android:name="com.google.firebase.MESSAGING_EVENT" />
- * </intent-filter>
  */
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
@@ -94,8 +104,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     Constants.REQUEST_CODE_APPROVE,
                 new Intent(this, NotificationReceiver.class)
                         .putExtra(Constants.KEY_INTENT_APPROVE, Constants.REQUEST_CODE_APPROVE)
+                        .putExtra("userId", data.get("receiverId"))
+                        .putExtra("otherUserId", data.get("senderId"))
+                        .putExtra("challenge", data.get("challenge"))
                         .putExtra("notificationId", notifId)
-                        .putExtra("challengeId", data.get("challengeId")),
+                        .putExtra("challengeId", data.get("challengeId"))
+                        .putExtra("chatId", data.get("chatId"))
+                        .putExtra("time", data.get("time")),
                 PendingIntent.FLAG_UPDATE_CURRENT
         );
 
@@ -122,12 +137,46 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      * @param data
      */
     private void sendChallengeResponseNotification(RemoteMessage.Notification notification, Map<String, String> data){
+        //check if the received challenge data is correct
+        String challengeResponseData = data.get("challengeResponseData");
+        String userId = data.get("receiverId");
+        SharedPreferencesHandler sharedPrefsHandler = new SharedPreferencesHandler(this);
+        /*
+        Key privateKey = null;
+        try {
+            privateKey = sharedPrefsHandler.getPrivateKey(userId);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        String challengeResult = CryptoHelper.decryptChallenge(challengeResponseData, (PrivateKey) privateKey);
+
+         */
+
+        //need to check if the challenge result is the same as the one that was sent
+        String timeString = data.get("time");
+        Timestamp time = new Timestamp(Integer.parseInt(timeString), 0);
+        String chatId = data.get("chatId");
+        String sentChallengeValue = sharedPrefsHandler.getChallengeValue(chatId);
+        byte[] key = sharedPrefsHandler.getCorrespondingChatKey(chatId, time);
+
+        String challengeResult = CryptoHelper.decryptMessage(challengeResponseData, key);
+
+        //building notification message body
+        String otherUsername = data.get("senderUsername");
+        String messageBody = "";
+        if(sentChallengeValue.equals(challengeResult)){
+            messageBody = otherUsername + " correctly responded to your push";
+        }
+        else{
+            messageBody = otherUsername + " incorrectly responded to your push";
+        }
+
         //generate a notification id
         int notifId = createNotifId();
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, Constants.CHANNEL_ID)
                 .setContentTitle(notification.getTitle())
-                .setContentText(notification.getBody())
+                .setContentText(messageBody) //.setContentText(notification.getBody())
                 .setSmallIcon(R.drawable.ic_action_chats);
 
         NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);

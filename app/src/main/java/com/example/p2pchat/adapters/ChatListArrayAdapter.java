@@ -9,6 +9,7 @@ import android.widget.TextView;
 
 import com.example.p2pchat.R;
 import com.example.p2pchat.objects.Chat;
+import com.example.p2pchat.utils.DateUtils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -82,20 +83,8 @@ public class ChatListArrayAdapter extends ArrayAdapter<Chat> {
         if (ChatObj.getLastMessageTime() == null) {
             dateText.setText("Previous Date");
         } else {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-            try {
-                Date currentDateWithoutTime = sdf.parse(sdf.format(new Date()));
-                Date chatDateWithoutTime = sdf.parse(sdf.format(ChatObj.getLastMessageTime()));
-
-                if(currentDateWithoutTime.equals(chatDateWithoutTime)){
-                    dateText.setText("Today");
-                }
-                else{
-                    dateText.setText(sdf.format(chatDateWithoutTime));
-                }
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
+            String dateString = DateUtils.dateStringWithoutTime(ChatObj.getLastMessageTime());
+            dateText.setText(dateString);
         }
 
         return row;

@@ -310,7 +310,7 @@ public class SharedPreferencesHandler {
         for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
             //if the key is for the chatid, get it
             String keyId = entry.getKey();
-            if(keyId.contains(chatId)){
+            if(keyId.contains(chatId) && !keyId.contains("challenge")){
                 String encodedKey = (String)entry.getValue();
 
                 //add the key and encodedKey to the keys map
@@ -390,6 +390,31 @@ public class SharedPreferencesHandler {
         return null;
 
          */
+    }
+
+    /**
+     * Saves a push challenge value to sharedPreferences
+     * @param chatId
+     * @param challengeValue
+     */
+    public void saveChallengeValue(String chatId, String challengeValue){
+        SharedPreferences.Editor editor = sharedPref.edit();
+
+        //Save values to sharedpreferences
+        editor.putString(chatId + "_challenge", challengeValue);
+
+        editor.apply();
+
+    }
+
+    /**
+     * Gets the last push challenge value
+     * @param chatId
+     * @return
+     */
+    public String getChallengeValue(String chatId){
+        String challengeValue = sharedPref.getString(chatId + "_challenge", "");
+        return challengeValue;
     }
 
     public void setContext(Context context) {
