@@ -213,7 +213,7 @@ class MainActivity : AppCompatActivity() {
 
                     }
 
-                    progressBar.visibility = View.GONE
+                    //progressBar.visibility = View.GONE
                 }
             }
 
@@ -249,6 +249,9 @@ class MainActivity : AppCompatActivity() {
         val db =  FirebaseFirestore.getInstance()
         db.collection("users").document(currentUser.id).get()
             .addOnSuccessListener {snap->
+                val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+                progressBar.visibility = View.GONE
+
                 val dbDeviceToken = snap.data?.get("deviceToken") as String?
 
                 //not using a new device, since the tokens match

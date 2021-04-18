@@ -50,6 +50,16 @@
             tools:layout_editor_absoluteY="16dp" />
 
         <ImageButton
+            android:id="@+id/keyButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/ic_key_24px"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/challengeButton"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
             android:id="@+id/challengeButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

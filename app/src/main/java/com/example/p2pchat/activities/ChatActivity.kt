@@ -14,6 +14,7 @@ import android.database.DataSetObserver
 import android.widget.AbsListView
 import androidx.appcompat.app.AlertDialog
 import com.example.p2pchat.adapters.ChatMessageArrayAdapter
+import com.example.p2pchat.adapters.KeyButton
 import com.example.p2pchat.objects.SessionKey
 import com.example.p2pchat.utils.CryptoHelper
 import com.example.p2pchat.utils.SharedPreferencesHandler
@@ -50,6 +51,9 @@ class ChatActivity : AppCompatActivity() {
         //change the header for the chat
         val usernameTextView = findViewById<TextView>(R.id.usernameText)
         usernameTextView.setText(otherUser?.username) //usernameTextView.setText(otherUsername)
+
+        //set up the button for uploading a new key
+        val keyButton = KeyButton(this);
 
         /*
         //establish the secret key for this chat
@@ -151,6 +155,7 @@ class ChatActivity : AppCompatActivity() {
                         catch(e: Exception){
                             //If this is run, it means that the person's account was regenerated
                             Log.d("loadSessionKeys()", "Certain session key decryptions skipped")
+                            e.printStackTrace()
                         }
                     }
                     //otherwise, the key existed in sharedPreferences, so add it to the array
@@ -164,6 +169,7 @@ class ChatActivity : AppCompatActivity() {
             }
 
             //if there are no keys in the sessionKeys array, this means a new key must be generated for this chat
+            //will run for the chat creator when opening the chat for the first time
             if(sessionKeys.size == 0){
                 //new session key data
                 val sessionKey = CryptoHelper.generateSessionKey()
