@@ -24,7 +24,7 @@ In the toolbar, select the connected Android device, and press the green Run but
 ### Firebase
 To begin contributing, you will need access to Firebase, which acts as the server and database for the project.
 
-[Firebase Link]https://console.firebase.google.com/project/encchat-506da/overview)
+[Firebase Link](https://console.firebase.google.com/project/encchat-506da/overview)
 
 To request access, send an email to keevee810@gmail.com
 
