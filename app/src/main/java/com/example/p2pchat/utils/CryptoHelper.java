@@ -50,7 +50,7 @@ public class CryptoHelper {
     static public Key decodeKey(String keyStr, KeyType keyType, String alg) throws NoSuchAlgorithmException, InvalidKeySpecException {
         try {
             byte[] sigBytes = Base64.decode(keyStr, Base64.DEFAULT);
-            KeyFactory keyFact = KeyFactory.getInstance(alg); //KeyFactory keyFact = KeyFactory.getInstance("RSA");
+            KeyFactory keyFact = KeyFactory.getInstance(alg);
 
             Key key = null;
             //creates a public key
@@ -66,7 +66,6 @@ public class CryptoHelper {
             return key;
         }
         catch (NullPointerException e){
-            //e.printStackTrace();
             Log.d("CryptoHelper decodeKey","Key was null");
             return null;
         }
@@ -211,15 +210,7 @@ public class CryptoHelper {
         byte[] encryptedMessageBytes = new byte[0];
         try {
             encryptedMessageBytes = secretKeyAlg.encrypt(message).get("ciphertext");
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         String encryptedMessage = Base64.encodeToString(encryptedMessageBytes, Base64.DEFAULT);
@@ -243,17 +234,7 @@ public class CryptoHelper {
         String plaintext = null;
         try {
             plaintext = secretKeyAlg.decrypt(message);
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidAlgorithmParameterException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 

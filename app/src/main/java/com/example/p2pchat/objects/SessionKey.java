@@ -7,12 +7,9 @@ import com.google.firebase.Timestamp;
 import java.util.Objects;
 
 public class SessionKey {
-
-    //uploader and decrypter values from database probably not needed
-
-    String keyId;
-    byte[] sessionKey; // should hold the decrypted version of the key
-    Timestamp timeCreated;
+    private String keyId;
+    private byte[] sessionKey; // should hold the decrypted version of the key
+    private Timestamp timeCreated;
 
     public SessionKey(){
         setKeyId("");
